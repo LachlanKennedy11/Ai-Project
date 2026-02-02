@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lachlan Kennedy | AI Engineer Profile</title>
+    
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Custom Keyframes and Classes that Tailwind doesn't have by default */
+        @keyframes scan {
+          0%, 100% { top: 0%; opacity: 0; }
+          10% { opacity: 1; }
+          90% { opacity: 1; }
+          50% { top: 100%; }
+        }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+        @keyframes fadeUp {
+          to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .scan-line {
+          position: absolute;
+          width: 100%;
+          height: 2px;
+          background: #14b8a6;
+          box-shadow: 0 0 10px #14b8a6, 0 0 20px #14b8a6;
+          animation: scan 3s ease-in-out infinite;
+          left: 0;
+          z-index: 10;
+        }
+        
+        .grid-bg {
+          background-size: 40px 40px;
+          background-image: linear-gradient(to right, rgba(20, 184, 166, 0.05) 1px, transparent 1px),
+                            linear-gradient(to bottom, rgba(20, 184, 166, 0.05) 1px, transparent 1px);
+        }
+        
+        .animate-fade-up {
+          animation: fadeUp 0.8s ease-out forwards;
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-200 font-sans selection:bg-teal-500 selection:text-white">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons Components (Replacing Lucide Imports) ---
+        const IconBase = ({ children, size = 24, className = "" }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                {children}
+            </svg>
+        );
+
+        const ShieldCheck = (props) => (
+            <IconBase {...props}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></IconBase>
+        );
+        const Cpu = (props) => (
+            <IconBase {...props}><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></IconBase>
+        );
+        const Car = (props) => (
+            <IconBase {...props}><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></IconBase>
+        );
+        const Users = (props) => (
+            <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>
+        );
+        const MapPin = (props) => (
+            <IconBase {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>
+        );
+        const Briefcase = (props) => (
+            <IconBase {...props}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>
+        );
+        const User = (props) => (
+            <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>
+        );
+        const Eye = (props) => (
+            <IconBase {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></IconBase>
+        );
+        const AlertTriangle = (props) => (
+            <IconBase {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconBase>
+        );
+        const CheckCircle = (props) => (
+            <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></IconBase>
+        );
+        const Lock = (props) => (
+            <IconBase {...props}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></IconBase>
+        );
+
+        // --- Main App Component ---
+        const App = () => {
+            const [verified, setVerified] = useState(false);
+            const [scanning, setScanning] = useState(false);
+            const [showScanModal, setShowScanModal] = useState(false);
+            const [scanProgress, setScanProgress] = useState(0);
+
+            // Handle the scanning simulation
+            const handleVerify = () => {
+                if (verified) return;
+                setShowScanModal(true);
+                setScanning(true);
+                setScanProgress(0);
+
+                // Animate progress bar
+                const interval = setInterval(() => {
+                    setScanProgress((prev) => {
+                        if (prev >= 100) {
+                            clearInterval(interval);
+                            setScanning(false);
+                            setTimeout(() => {
+                                setShowScanModal(false);
+                                setVerified(true);
+                            }, 800);
+                            return 100;
+                        }
+                        return prev + 2;
+                    });
+                }, 30);
+            };
+
+            return (
+                <div className="min-h-screen text-slate-200 font-sans overflow-x-hidden relative">
+                    
+                    {/* Animated Background Grid */}
+                    <div className="absolute inset-0 grid-bg pointer-events-none"></div>
+
+                    {/* Navigation / Header */}
+                    <nav className="fixed w-full z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+                        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+                            <div className="text-xl font-bold tracking-tighter text-teal-400 flex items-center gap-2">
+                                <Cpu size={20} className="animate-pulse" />
+                                LK_PROFILE_V3.1
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border transition-all duration-500 ${verified ? 'border-green-500 text-green-400 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'border-red-500 text-red-400 bg-red-500/10 animate-pulse'}`}>
+                                    {verified ? <ShieldCheck size={14} /> : <Eye size={14} />}
+                                    {verified ? "HUMAN VERIFIED" : "UNVERIFIED ENTITY"}
+                                </div>
+                            </div>
+                        </div>
+                    </nav>
+
+                    <main className="pt-24 pb-20 px-6 max-w-5xl mx-auto relative z-10">
+                        
+                        {/* Hero Section */}
+                        <div className="flex flex-col md:flex-row gap-12 items-center mb-24 animate-fade-up">
+                            <div className="w-full md:w-1/2 relative group">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-indigo-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+                                <div className="relative aspect-[3/4] w-full max-w-md mx-auto overflow-hidden rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl">
+                                    <img 
+                                        src="Screenshot 2026-01-30 112609.jpg" 
+                                        alt="Lachlan Kennedy" 
+                                        className={`w-full h-full object-cover transition-all duration-700 ${verified ? 'grayscale-0' : 'grayscale contrast-125'}`}
+                                        onError={(e) => {
+                                            e.target.onerror = null; 
+                                            e.target.src = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop";
+                                        }}
+                                    />
+                                    
+                                    {/* Scanning Line Animation (Only if NOT verified) */}
+                                    {!verified && <div className="scan-line"></div>}
+
+                                    {/* Overlay UI elements */}
+                                    <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
+                                        <div className="bg-slate-900/90 backdrop-blur px-3 py-1 rounded border border-slate-600 text-xs font-mono text-teal-400 shadow-lg">
+                                            ID: LK-992-ALPHA
+                                        </div>
+                                        {!verified && (
+                                            <div className="text-[10px] font-mono text-red-400 bg-red-900/80 px-2 py-1 rounded animate-pulse">
+                                                BIOMETRIC LOCK ACTIVE
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="w-full md:w-1/2 space-y-6 animate-fade-up delay-100">
+                                <div>
+                                    <h2 className="text-teal-500 font-mono text-sm tracking-widest mb-2 flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-teal-500 rounded-full inline-block"></span>
+                                        AI ENGINEER // HUNTSVILLE
+                                    </h2>
+                                    <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight mb-2">
+                                        Lachlan <br/> Kennedy
+                                    </h1>
+                                    <p className="text-xl text-slate-400">My job is completely AI-led, but I verify everything with human intuition.</p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 py-6 border-t border-slate-800">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-slate-800 rounded-lg text-teal-400 border border-slate-700"><User size={20} /></div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 font-mono">AGE</p>
+                                            <p className="font-semibold">32 Years Old</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-slate-800 rounded-lg text-teal-400 border border-slate-700"><MapPin size={20} /></div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 font-mono">LOCATION</p>
+                                            <p className="font-semibold">Huntsville, AL</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 col-span-2">
+                                        <div className="p-2 bg-slate-800 rounded-lg text-teal-400 border border-slate-700"><Briefcase size={20} /></div>
+                                        <div>
+                                            <p className="text-xs text-slate-500 font-mono">OCCUPATION</p>
+                                            <p className="font-semibold">Computer & AI Engineer</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {!verified ? (
+                                    <button 
+                                        onClick={handleVerify}
+                                        className="w-full py-4 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold tracking-wide transition-all shadow-lg shadow-teal-900/20 flex items-center justify-center gap-2 group relative overflow-hidden"
+                                    >
+                                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                                        <Eye size={20} />
+                                        INITIATE EYE SCAN
+                                    </button>
+                                ) : (
+                                    <div className="w-full py-4 bg-green-500/10 border border-green-500/30 text-green-400 rounded-lg font-bold tracking-wide flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+                                        <ShieldCheck size={20} />
+                                        IDENTITY CONFIRMED: REAL HUMAN
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Content Grid */}
+                        <div className="grid md:grid-cols-12 gap-8">
+                            
+                            {/* Main Column */}
+                            <div className="md:col-span-7 space-y-12 animate-fade-up delay-200">
+                                
+                                {/* Philosophy Section */}
+                                <section>
+                                    <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                                        <AlertTriangle className="text-amber-500" />
+                                        Why I Don't Trust The Internet
+                                    </h3>
+                                    <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700/50 backdrop-blur-sm relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-10">
+                                            <Lock size={100} />
+                                        </div>
+                                        <p className="text-lg leading-relaxed text-slate-300 mb-6 relative z-10">
+                                            "I use AI every single day, but I do not trust the internet anymore."
+                                        </p>
+                                        <p className="text-slate-400 leading-relaxed relative z-10">
+                                            The problem is that AI now provides the <strong>most perfect answer</strong>. It sounds logical, it sounds authoritative, and it makes it seem right—but it is often completely wrong. In a world of perfect digital lies, human verification is the only truth we have left.
+                                        </p>
+                                    </div>
+                                </section>
+
+                                {/* Innovations Section */}
+                                <section>
+                                    <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                                        <Cpu className="text-teal-500" />
+                                        My Creations
+                                    </h3>
+                                    
+                                    <div className="space-y-6">
+                                        <div className="group relative bg-slate-800 rounded-xl p-6 border border-slate-700 hover:border-teal-500/50 transition-all hover:shadow-[0_0_30px_rgba(20,184,166,0.1)] hover:-translate-y-1">
+                                            <div className="absolute top-6 right-6 p-2 bg-slate-900 rounded-lg text-teal-400 group-hover:text-white group-hover:bg-teal-600 transition-colors">
+                                                <Car size={24} />
+                                            </div>
+                                            <h4 className="text-xl font-bold text-white mb-2">Flying Self-Driving AI Cars</h4>
+                                            <p className="text-slate-400 mb-4 pr-12">
+                                                I designed these vehicles to take to the skies. The result? <strong>There is no traffic anymore.</strong> The AI handles the navigation perfectly, allowing for seamless travel above the congestion of the past.
+                                            </p>
+                                            <div className="flex gap-2">
+                                                <span className="text-xs font-mono px-2 py-1 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20">NO TRAFFIC</span>
+                                                <span className="text-xs font-mono px-2 py-1 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20">SELF-DRIVING</span>
+                                            </div>
+                                        </div>
+
+                                        <div className="group relative bg-slate-800 rounded-xl p-6 border border-slate-700 hover:border-teal-500/50 transition-all hover:shadow-[0_0_30px_rgba(20,184,166,0.1)] hover:-translate-y-1">
+                                            <div className="absolute top-6 right-6 p-2 bg-slate-900 rounded-lg text-teal-400 group-hover:text-white group-hover:bg-teal-600 transition-colors">
+                                                <Eye size={24} />
+                                            </div>
+                                            <h4 className="text-xl font-bold text-white mb-2">The Eye Scan Feature</h4>
+                                            <p className="text-slate-400 mb-4 pr-12">
+                                                To solve the trust issue, I created a new eye scan feature. It detects if you are a real human or an AI. This scan is now required <strong>to go anywhere in the world</strong>, ensuring society remains human-verified.
+                                            </p>
+                                            <div className="flex gap-2">
+                                                <span className="text-xs font-mono px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">REAL vs AI</span>
+                                                <span className="text-xs font-mono px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">GLOBAL PASSPORT</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+
+                            {/* Sidebar */}
+                            <div className="md:col-span-5 space-y-8 animate-fade-up delay-300">
+                                
+                                {/* Family Card */}
+                                <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 rounded-2xl p-8 border border-amber-900/30 relative overflow-hidden transition-transform hover:scale-[1.02]">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                                    
+                                    <div className="relative z-10">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <div className="p-2 bg-amber-500/20 text-amber-400 rounded-lg shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                                                <Users size={24} />
+                                            </div>
+                                            <h3 className="text-xl font-bold text-amber-100">Most Important: Family</h3>
+                                        </div>
+                                        
+                                        <p className="text-amber-200/80 italic mb-6 border-l-2 border-amber-500/50 pl-4">
+                                            "The last part of human touch left."
+                                        </p>
+                                        
+                                        <p className="text-sm text-slate-400 leading-relaxed">
+                                            In a world dominated by AI, the most important people to me are my family. They represent the only genuine connection remaining—the last true human touch in a digital existence.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Status Panel */}
+                                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 font-mono text-xs shadow-xl">
+                                    <h4 className="text-slate-500 mb-4 uppercase tracking-widest border-b border-slate-800 pb-2 flex justify-between">
+                                        User Statistics
+                                        <span className="animate-pulse text-teal-500">● LIVE</span>
+                                    </h4>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-slate-400">DAILY AI USAGE</span>
+                                                <span className="text-teal-400">100%</span>
+                                            </div>
+                                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                                <div className="w-full bg-teal-500 h-full rounded-full shadow-[0_0_10px_rgba(20,184,166,0.8)]"></div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-slate-400">INTERNET TRUST</span>
+                                                <span className="text-red-400">0%</span>
+                                            </div>
+                                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                                <div className="w-0 bg-red-500 h-full rounded-full"></div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className="text-slate-400">TRAFFIC LEVEL</span>
+                                                <span className="text-indigo-400">0%</span>
+                                            </div>
+                                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                                                <div className="w-[1px] bg-indigo-500 h-full rounded-full"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
+                    </main>
+
+                    <footer className="border-t border-slate-800 bg-slate-900 py-12 text-center text-slate-500 text-sm relative z-10">
+                        <p className="mb-2">© 2026 Lachlan Kennedy.</p>
+                        <p>Huntsville, Alabama | Human Verified.</p>
+                    </footer>
+
+                    {/* Full Screen Scanning Overlay Modal */}
+                    {showScanModal && (
+                        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center">
+                            <div className="w-full max-w-md p-8 relative">
+                                
+                                {/* Scanner Visuals */}
+                                <div className="relative w-64 h-64 mx-auto mb-8 border-2 border-teal-500/30 rounded-full overflow-hidden flex items-center justify-center">
+                                    <div className="absolute inset-0 bg-teal-500/10 animate-pulse"></div>
+                                    <Eye size={80} className="text-teal-500 relative z-10" />
+                                    
+                                    {/* Moving Bar */}
+                                    <div className="absolute top-0 left-0 right-0 h-1 bg-teal-400 shadow-[0_0_20px_#2dd4bf] animate-[scan_1.5s_ease-in-out_infinite]"></div>
+                                </div>
+
+                                <h2 className="text-2xl font-mono text-teal-400 text-center mb-4 tracking-widest">
+                                    VERIFYING RETINA
+                                </h2>
+                                
+                                {/* Progress Bar */}
+                                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
+                                    <div 
+                                        className="h-full bg-teal-500 transition-all duration-100 ease-out"
+                                        style={{ width: `${scanProgress}%` }}
+                                    ></div>
+                                </div>
+                                <div className="flex justify-between text-xs font-mono text-slate-500 mt-2">
+                                    <span>SCANNING BIOMETRICS...</span>
+                                    <span>{scanProgress}%</span>
+                                </div>
+
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
