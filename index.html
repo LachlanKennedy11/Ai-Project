@@ -77,12 +77,6 @@
           z-index: 10;
         }
         
-        .grid-bg {
-          background-size: 40px 40px;
-          background-image: linear-gradient(to right, rgba(20, 184, 166, 0.03) 1px, transparent 1px),
-                            linear-gradient(to bottom, rgba(20, 184, 166, 0.03) 1px, transparent 1px);
-        }
-        
         .animate-fade-up {
           animation: fadeUp 0.8s ease-out forwards;
           opacity: 0;
@@ -104,7 +98,6 @@
             height: 200vh;
             background: transparent url('http://assets.iceable.com/img/noise-transparent.png') repeat 0 0;
             background-repeat: repeat;
-            animation: noise .2s infinite;
             opacity: .05;
             visibility: visible;
             pointer-events: none;
@@ -161,6 +154,112 @@
         const Video = (props) => <IconBase {...props}><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2" ry="2"/></IconBase>;
         const Cloud = (props) => <IconBase {...props}><path d="M17.5 19c0-1.7-1.3-3-3-3h-1.1c-.1-2.6-2.2-4.6-4.8-4.6-2.2 0-4.1 1.5-4.7 3.6A3.8 3.8 0 0 0 5 22.8c2.1 0 3.8-1.7 3.8-3.8V19h8.8c1.7 0 3-1.3 3-3Z"/></IconBase>;
         const Thermometer = (props) => <IconBase {...props}><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></IconBase>;
+        const Move = (props) => <IconBase {...props}><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></IconBase>;
+
+        // --- Animated Neural Lattice Background ---
+        const ParticleBackground = () => {
+            const canvasRef = useRef(null);
+            const mouseRef = useRef({ x: 0, y: 0 });
+            
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                let width = canvas.width = window.innerWidth;
+                let height = canvas.height = window.innerHeight;
+                
+                const particles = [];
+                const particleCount = 70;
+                
+                class Particle {
+                    constructor() {
+                        this.x = Math.random() * width;
+                        this.y = Math.random() * height;
+                        this.vx = (Math.random() - 0.5) * 0.5;
+                        this.vy = (Math.random() - 0.5) * 0.5;
+                        this.size = Math.random() * 2 + 1;
+                    }
+                    
+                    update() {
+                        this.x += this.vx;
+                        this.y += this.vy;
+                        
+                        if (this.x < 0 || this.x > width) this.vx *= -1;
+                        if (this.y < 0 || this.y > height) this.vy *= -1;
+                    }
+                    
+                    draw() {
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                        ctx.fillStyle = '#14b8a6';
+                        ctx.fill();
+                    }
+                }
+                
+                for (let i = 0; i < particleCount; i++) {
+                    particles.push(new Particle());
+                }
+                
+                function animate() {
+                    ctx.clearRect(0, 0, width, height);
+                    
+                    particles.forEach(p => {
+                        p.update();
+                        p.draw();
+                        
+                        // Connect to other particles
+                        particles.forEach(p2 => {
+                            const dx = p.x - p2.x;
+                            const dy = p.y - p2.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 100) {
+                                ctx.beginPath();
+                                ctx.strokeStyle = `rgba(20, 184, 166, ${1 - distance / 100})`;
+                                ctx.lineWidth = 0.5;
+                                ctx.moveTo(p.x, p.y);
+                                ctx.lineTo(p2.x, p2.y);
+                                ctx.stroke();
+                            }
+                        });
+
+                        // Connect to mouse
+                        const dx = p.x - mouseRef.current.x;
+                        const dy = p.y - mouseRef.current.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < 150) {
+                            ctx.beginPath();
+                            ctx.strokeStyle = `rgba(99, 102, 241, ${1 - distance / 150})`; // Indigo color for mouse
+                            ctx.lineWidth = 0.8;
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(mouseRef.current.x, mouseRef.current.y);
+                            ctx.stroke();
+                        }
+                    });
+                    
+                    requestAnimationFrame(animate);
+                }
+                
+                animate();
+                
+                const handleResize = () => {
+                    width = canvas.width = window.innerWidth;
+                    height = canvas.height = window.innerHeight;
+                };
+
+                const handleMouseMove = (e) => {
+                    mouseRef.current = { x: e.clientX, y: e.clientY };
+                }
+                
+                window.addEventListener('resize', handleResize);
+                window.addEventListener('mousemove', handleMouseMove);
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    window.removeEventListener('mousemove', handleMouseMove);
+                }
+            }, []);
+
+            return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0 opacity-20" />;
+        };
 
         // --- Custom Cursor Component ---
         const CustomCursor = () => {
@@ -193,10 +292,7 @@
                     }}
                 >
                     <div className="relative">
-                        {/* Core cursor */}
                         <div className="w-4 h-4 border border-teal-500 rounded-full bg-teal-500/20 shadow-[0_0_15px_rgba(20,184,166,0.6)]"></div>
-                        
-                        {/* Crosshairs */}
                         <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0.5 h-2 bg-teal-500/50"></div>
                         <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0.5 h-2 bg-teal-500/50"></div>
                         <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-2 h-0.5 bg-teal-500/50"></div>
@@ -206,7 +302,6 @@
             );
         };
 
-        // --- Hacker Text Decoder Component ---
         const HackerText = ({ text, className }) => {
             const [displayText, setDisplayText] = useState('');
             const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()';
@@ -214,7 +309,6 @@
             useEffect(() => {
                 let iteration = 0;
                 let interval = null;
-
                 interval = setInterval(() => {
                     setDisplayText(prev => 
                         text.split('').map((letter, index) => {
@@ -222,21 +316,22 @@
                             return chars[Math.floor(Math.random() * chars.length)]
                         }).join('')
                     );
-
                     if(iteration >= text.length) clearInterval(interval);
                     iteration += 1/3;
                 }, 30);
-
                 return () => clearInterval(interval);
             }, [text]);
 
             return <span className={className}>{displayText}</span>;
         }
 
-        // --- Network Traffic Monitor ---
+        // --- Draggable Network Monitor ---
         const NetworkMonitor = () => {
             const [logs, setLogs] = useState([]);
-            
+            const [position, setPosition] = useState({ x: 20, y: 150 });
+            const [isDragging, setIsDragging] = useState(false);
+            const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
+
             useEffect(() => {
                 const addLog = () => {
                     const actions = ["BLOCKING", "SCANNING", "FILTERING", "REJECTING"];
@@ -249,17 +344,57 @@
                     };
                     setLogs(prev => [newLog, ...prev].slice(0, 10));
                 };
-
                 const interval = setInterval(addLog, 2000);
                 return () => clearInterval(interval);
             }, []);
 
+            const handleMouseDown = (e) => {
+                setIsDragging(true);
+                dragRef.current = {
+                    startX: e.clientX,
+                    startY: e.clientY,
+                    initialX: position.x,
+                    initialY: position.y
+                };
+            };
+
+            useEffect(() => {
+                const handleMouseMove = (e) => {
+                    if (!isDragging) return;
+                    const dx = e.clientX - dragRef.current.startX;
+                    const dy = e.clientY - dragRef.current.startY;
+                    setPosition({
+                        x: dragRef.current.initialX + dx,
+                        y: dragRef.current.initialY + dy
+                    });
+                };
+                const handleMouseUp = () => setIsDragging(false);
+
+                if (isDragging) {
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                }
+                return () => {
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    window.removeEventListener('mouseup', handleMouseUp);
+                };
+            }, [isDragging]);
+
             return (
-                <div className="hidden lg:block fixed left-6 top-32 bottom-20 w-48 font-mono text-[10px] text-teal-500/40 select-none pointer-events-none z-30">
-                    <div className="border-b border-teal-500/20 pb-2 mb-2 uppercase tracking-widest">Live Network Monitor</div>
-                    <div className="flex flex-col gap-2 overflow-hidden h-full mask-linear">
+                <div 
+                    className="hidden lg:block fixed w-56 font-mono text-[10px] text-teal-500/40 z-30 bg-slate-950/80 border border-teal-500/20 rounded backdrop-blur-sm shadow-2xl"
+                    style={{ left: position.x, top: position.y, cursor: isDragging ? 'none' : 'none' }}
+                >
+                    <div 
+                        onMouseDown={handleMouseDown}
+                        className="bg-teal-900/20 border-b border-teal-500/20 p-2 flex justify-between items-center cursor-move select-none hover:bg-teal-900/30 transition-colors"
+                    >
+                        <span className="uppercase tracking-widest text-teal-400 font-bold">NET_MON_V4</span>
+                        <Move size={12} className="text-teal-500/50" />
+                    </div>
+                    <div className="p-2 flex flex-col gap-2 h-48 overflow-hidden mask-linear">
                         {logs.map(log => (
-                            <div key={log.id} className="animate-fade-up">
+                            <div key={log.id} className="animate-fade-up border-b border-teal-500/5 pb-1 last:border-0">
                                 <span className="text-teal-500/80">[{log.action}]</span> <br/>
                                 {log.target} <br/>
                                 <span className="opacity-50">SRC: {log.ip}</span>
@@ -270,7 +405,6 @@
             );
         };
 
-        // --- Atmospheric Sensor Widget ---
         const AtmosphereWidget = () => (
             <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 font-mono text-xs shadow-xl relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity text-teal-500">
@@ -302,7 +436,6 @@
             </div>
         );
 
-        // --- Boot Sequence Component ---
         const BootSequence = ({ onComplete }) => {
             const [lines, setLines] = useState([]);
             const bootText = [
@@ -343,7 +476,6 @@
             );
         };
 
-        // --- Interactive Journal Component ---
         const JournalEntry = ({ date, title, content, icon: Icon }) => {
             const [isDecrypted, setIsDecrypted] = useState(false);
             const [displayContent, setDisplayContent] = useState("");
@@ -395,7 +527,6 @@
             );
         };
 
-        // --- Blueprints Component (Unlockable) ---
         const Blueprints = ({ active }) => {
             if (!active) return (
                 <div className="mt-12 p-8 border border-slate-800 border-dashed rounded-xl bg-slate-900/30 flex flex-col items-center justify-center text-center">
@@ -415,11 +546,9 @@
                         <HackerText text="Declassified Schematics" />
                     </h3>
                     <div className="grid md:grid-cols-2 gap-6">
-                        {/* Flying Car Blueprint */}
                         <div className="bg-slate-900/80 border border-teal-500/30 rounded-xl p-6 relative overflow-hidden group hover:border-teal-500/60 transition-colors">
                             <div className="absolute top-0 right-0 bg-teal-500/20 px-2 py-1 text-[10px] font-mono text-teal-400 rounded-bl">PROTOTYPE MK-IV</div>
                             <div className="h-32 mb-4 border border-teal-500/10 rounded bg-slate-950/50 flex items-center justify-center relative">
-                                {/* Simple SVG Car Wireframe */}
                                 <svg width="120" height="60" viewBox="0 0 120 60" fill="none" stroke="#14b8a6" strokeWidth="1" className="opacity-80">
                                     <path d="M10,40 L30,40 L35,20 L85,20 L90,40 L110,40" strokeDasharray="4 2" />
                                     <path d="M35,40 Q60,55 85,40" />
@@ -435,11 +564,9 @@
                             </p>
                         </div>
 
-                         {/* Eye Scanner Blueprint */}
                          <div className="bg-slate-900/80 border border-indigo-500/30 rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/60 transition-colors">
                             <div className="absolute top-0 right-0 bg-indigo-500/20 px-2 py-1 text-[10px] font-mono text-indigo-400 rounded-bl">BIO-KEY v9.0</div>
                             <div className="h-32 mb-4 border border-indigo-500/10 rounded bg-slate-950/50 flex items-center justify-center relative">
-                                {/* Simple SVG Eye Wireframe */}
                                 <svg width="80" height="80" viewBox="0 0 100 100" fill="none" stroke="#6366f1" strokeWidth="1" className="opacity-80">
                                     <circle cx="50" cy="50" r="40" strokeDasharray="4 4" className="animate-[spin_10s_linear_infinite]" />
                                     <circle cx="50" cy="50" r="20" />
@@ -458,7 +585,6 @@
             );
         }
 
-        // --- Secure Video Feed Component ---
         const SecureVideoFeed = () => {
             const [connected, setConnected] = useState(false);
 
@@ -489,7 +615,7 @@
                         </div>
                     ) : (
                         <div className="aspect-video bg-black relative">
-                            {/* --- FIXED: USED CORRECT EMBED LINK --- */}
+                            {/* --- VIDEO EMBED LINK PRESERVED --- */}
                             <iframe 
                                 className="w-full h-full"
                                 src="https://app.heygen.com/embedded-player/65a8c67b4fb54237ae61fd4648f0ee8a" 
@@ -499,7 +625,6 @@
                                 allowFullScreen
                             ></iframe>
                             
-                            {/* Overlay for "screen" effect */}
                             <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] border border-teal-500/20"></div>
                         </div>
                     )}
@@ -507,7 +632,29 @@
             );
         };
 
-        // --- Main App Component ---
+        const Typer = ({ text, delay = 0 }) => {
+            const [displayedText, setDisplayedText] = useState("");
+            const [started, setStarted] = useState(false);
+
+            useEffect(() => {
+                const timer = setTimeout(() => setStarted(true), delay);
+                return () => clearTimeout(timer);
+            }, [delay]);
+
+            useEffect(() => {
+                if (!started) return;
+                let i = 0;
+                const interval = setInterval(() => {
+                    setDisplayedText(text.substring(0, i + 1));
+                    i++;
+                    if (i === text.length) clearInterval(interval);
+                }, 20); // Typing speed
+                return () => clearInterval(interval);
+            }, [text, started]);
+
+            return <span>{displayedText}</span>;
+        };
+
         const App = () => {
             const [booted, setBooted] = useState(false);
             const [verified, setVerified] = useState(false);
@@ -543,11 +690,9 @@
             return (
                 <div className="min-h-screen text-slate-300 font-sans overflow-x-hidden relative">
                     <CustomCursor />
+                    <ParticleBackground />
                     <NetworkMonitor />
                     
-                    {/* Animated Background Grid */}
-                    <div className="absolute inset-0 grid-bg pointer-events-none fixed"></div>
-
                     {/* Navigation */}
                     <nav className="fixed w-full z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
                         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
@@ -662,7 +807,7 @@
                             {/* Main Column - Logs & Philosophy */}
                             <div className="md:col-span-7 space-y-12 animate-fade-up delay-300">
                                 
-                                {/* --- NEW SECURE VIDEO FEED SECTION --- */}
+                                {/* --- SECURE VIDEO FEED SECTION --- */}
                                 <SecureVideoFeed />
                                 
                                 {/* Dead Internet Philosophy */}
@@ -676,14 +821,10 @@
                                             <Lock size={120} />
                                         </div>
                                         <p className="text-lg leading-relaxed text-slate-300 mb-6 relative z-10">
-                                            "The internet isn't a library anymore. It's a hall of mirrors."
+                                            <Typer text='"The internet isn&apos;t a library anymore. It&apos;s a hall of mirrors."' delay={200} />
                                         </p>
                                         <p className="text-slate-400 leading-relaxed relative z-10 text-sm">
-                                            My job as a Neural Architect is to act as a bridge between "Raw Compute" and reality. 
-                                            We don't have "coders" anymore; self-optimizing compilers swallowed those jobs. 
-                                            Instead, we prune the recursive growth of synthetic intelligence. 
-                                            Without the <strong>Eye Scan</strong> and <strong>Biometric Handshakes</strong>, 
-                                            you can never be 100% sure you aren't talking to a sophisticated scam-bot.
+                                            <Typer text="My job as a Neural Architect is to act as a bridge between 'Raw Compute' and reality. We don't have 'coders' anymore; self-optimizing compilers swallowed those jobs. Instead, we prune the recursive growth of synthetic intelligence. Without the Eye Scan and Biometric Handshakes, you can never be 100% sure you aren't talking to a sophisticated scam-bot." delay={2000} />
                                         </p>
                                     </div>
                                 </section>
@@ -703,28 +844,28 @@
                                             date="March 12, 2040"
                                             title='The "Ghost in the Code" Shift'
                                             icon={Cpu}
-                                            content="I spent most of my shift today inside the Lattice. As a Neural Architect, I don’t write syntax anymore—I shape intent. Today was grueling because I had to decommission an older 'Legacy Logic' unit. It felt like an archaeological dig. My role is to ensure the AI remains a tool and doesn't become a black box we can no longer decode."
+                                            content="I spent most of my shift today inside the Lattice, which is a far cry from the monitors and keyboards I used when I started as a junior dev. As a Neural Architect, I don’t write syntax anymore—I shape intent. My job is to act as a bridge between the 'Raw Compute' and the ethical guardrails of our city’s infrastructure. AI doesn’t just assist; it is the foundation. We don’t have 'coders' in the 2020s sense. Those roles were swallowed by self-optimizing compilers years ago. Instead, we have 'Prompt Ethicists' and 'Data Foresters' who prune the recursive growth of synthetic intelligence to keep it from hallucinating. Today was grueling because I had to decommission an older 'Legacy Logic' unit. It felt like an archaeological dig. It’s strange to think that people used to spend forty hours a week doing data entry or basic accounting. Those jobs are ghosts now. Now, we work twenty-hour weeks because the efficiency gains are so massive. My role is to ensure the AI remains a tool and doesn't become a black box we can no longer decode. It’s creative, high-stakes, and honestly, a bit exhausting to manage a mind that thinks a million times faster than your own."
                                         />
                                         
                                         <JournalEntry 
                                             date="April 5, 2040"
                                             title="The Haptic Hug"
                                             icon={Users}
-                                            content="I finally 'sat down' for dinner with my sister, Clara, via the Kinetic-Link system. We relied on Biometric Handshakes to connect. Without that digital certificate of authenticity, you can never be 100% sure. We spent two hours just talking—no tech talk, no filters—just two siblings anchored by a verified signal."
+                                            content="I finally 'sat down' for dinner with my sister, Clara, who lives in Neo-Tokyo. Even though we are thousands of miles apart, the Kinetic-Link system makes it feel like she’s in the chair across from me. We both wore our haptic sleeves, so when she reached out to squeeze my hand after I told her about my rough week, I actually felt the pressure on my skin. It’s these small, tactile moments that keep us grounded. The biggest hurdle these days isn't the distance; it’s the Trust-Gap. With deep-fake technology being perfect for a decade now, we don't use standard video calls anymore. We rely on Biometric Handshakes. Before our avatars even appeared, our personal AI agents verified our unique 'heartbeat signatures' on the blockchain. It sounds cold and clinical, but it’s actually the only way we feel safe enough to be vulnerable. Without that digital certificate of authenticity, you can never be 100% sure you aren't talking to a sophisticated scam-bot. It makes real human connection feel like a precious, guarded treasure. We spent two hours just talking—no tech talk, no filters—just two siblings anchored by a verified signal."
                                         />
                                         
                                         <JournalEntry 
                                             date="May 21, 2040"
                                             title="The Sub-Quantum Leap"
                                             icon={ShieldCheck}
-                                            content="Priority-one news alert projected onto my retinas: 'First Successful Sub-Quantum Data Transfer Achieved.' Instantaneous communication across the solar system. My lens displayed three green rings from the Verification Clusters. The world just got smaller, but the stakes just got infinitely higher."
+                                            content="I was sitting in a park—one of the few 'No-Signal Zones' left—when my Neural-Bud pulsed with a priority-one news alert. I didn't see a screen; the headline was projected directly onto my retinas via my contact lenses: 'First Successful Sub-Quantum Data Transfer Achieved in Mars Colony.' It’s the 'holy grail' of physics—instantaneous communication across the solar system, bypassing the speed of light. I immediately checked the source. In 2040, you don't trust headlines; you trust Verification Clusters. My lens displayed three green rings: one from the Global Science Collective, one from the Independent Fact-Oracles, and a third from my own personal trust-filter. Because all three aligned, I knew it wasn't a synthetic hoax or a market-manipulation tactic. It’s breathtaking to think that the lag-time for Martian colonists is effectively dead. But as a Neural Architect, I immediately thought of the security risks. If we can move data instantly, how do we stop a sub-quantum virus before it even starts? The world just got smaller, but the stakes just got infinitely higher. I watched the holographic trees in the park sway, wondering if the wind was real or a weather-mod, and felt a chill."
                                         />
                                         
                                         <JournalEntry 
                                             date="June 14, 2040"
                                             title="The Analog Resistance"
                                             icon={MapPin}
-                                            content="Today, I went entirely Off-Grid. No lenses, no haptics. I took an old-fashioned paper notebook to the coast. In the Lattice, if I make an error, the system autocorrects it. But on paper, a smudge is a permanent record of a human moment. It’s the only thing I own that doesn't have an IP address."
+                                            content="Today, I did something radical: I went entirely Off-Grid. No lenses, no haptics, no neural-buds. I took an old-fashioned paper notebook—actual wood pulp—and a graphite pencil to the coast. There’s a growing movement called the 'Analog Resistance.' It’s not that we hate technology; we just miss the 'friction' of the real world. In my job, everything is frictionless. Everything is optimized. If I want a coffee, it’s printed and delivered by a drone before I even realize I’m thirsty, based on my bio-readouts. Sitting on those rocks, I realized how much I miss the beauty of a mistake. In the Lattice, if I make an error, the system autocorrects it instantly. But on this paper, if I smudge the lead, the smudge stays. It’s a permanent record of a human moment. I spent the afternoon sketching the waves, and for the first time in months, I didn't feel like a component in a larger machine. I felt like an observer. We’ve built a world where we can simulate anything, but we haven't yet figured out how to simulate the feeling of salt spray on your face or the smell of old paper. I think I’ll keep the notebook. It’s the only thing I own that doesn't have an IP address."
                                         />
                                     </div>
                                 </section>
@@ -752,7 +893,6 @@
                                     </div>
                                 </div>
                                 
-                                {/* --- NEW ATMOSPHERIC WIDGET --- */}
                                 <AtmosphereWidget />
 
                                 {/* Tech Stack / Status */}
