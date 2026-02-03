@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lachlan Kennedy | AI Engineer Profile</title>
+    <title>Lachlan Kennedy | Neural Architect | 2040</title>
     
     <!-- React & ReactDOM -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -16,7 +16,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* Custom Keyframes and Classes that Tailwind doesn't have by default */
+        /* Custom Keyframes and Classes */
         @keyframes scan {
           0%, 100% { top: 0%; opacity: 0; }
           10% { opacity: 1; }
@@ -30,7 +30,42 @@
         @keyframes fadeUp {
           to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes glitch {
+          0% { transform: translate(0); }
+          20% { transform: translate(-2px, 2px); }
+          40% { transform: translate(-2px, -2px); }
+          60% { transform: translate(2px, 2px); }
+          80% { transform: translate(2px, -2px); }
+          100% { transform: translate(0); }
+        }
+        @keyframes noise {
+            0%, 100% { background-position: 0 0; }
+            10% { background-position: -5% -10%; }
+            20% { background-position: -15% 5%; }
+            30% { background-position: 7% -25%; }
+            40% { background-position: 20% 25%; }
+            50% { background-position: -25% 10%; }
+            60% { background-position: 15% 5%; }
+            70% { background-position: 0% 15%; }
+            80% { background-position: 25% 35%; }
+            90% { background-position: -10% 10%; }
+        }
         
+        /* CRT Scanline Effect */
+        .crt::before {
+            content: " ";
+            display: block;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 50;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
         .scan-line {
           position: absolute;
           width: 100%;
@@ -44,8 +79,8 @@
         
         .grid-bg {
           background-size: 40px 40px;
-          background-image: linear-gradient(to right, rgba(20, 184, 166, 0.05) 1px, transparent 1px),
-                            linear-gradient(to bottom, rgba(20, 184, 166, 0.05) 1px, transparent 1px);
+          background-image: linear-gradient(to right, rgba(20, 184, 166, 0.03) 1px, transparent 1px),
+                            linear-gradient(to bottom, rgba(20, 184, 166, 0.03) 1px, transparent 1px);
         }
         
         .animate-fade-up {
@@ -53,58 +88,341 @@
           opacity: 0;
           transform: translateY(20px);
         }
+
+        .glitch-hover:hover {
+            animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+            color: #f87171;
+        }
+
+        .noise-overlay {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            right: -50%;
+            bottom: -50%;
+            width: 200%;
+            height: 200vh;
+            background: transparent url('http://assets.iceable.com/img/noise-transparent.png') repeat 0 0;
+            background-repeat: repeat;
+            animation: noise .2s infinite;
+            opacity: .05;
+            visibility: visible;
+        }
+
+        /* Hide default cursor to use custom one */
+        body {
+            cursor: none;
+        }
         
-        .delay-100 { animation-delay: 0.1s; }
-        .delay-200 { animation-delay: 0.2s; }
-        .delay-300 { animation-delay: 0.3s; }
+        /* Scrollbar hiding */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-200 font-sans selection:bg-teal-500 selection:text-white">
+<body class="bg-slate-950 text-slate-300 font-sans selection:bg-teal-500 selection:text-white crt">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
-        // --- Icons Components (Replacing Lucide Imports) ---
+        // --- Icons Components ---
         const IconBase = ({ children, size = 24, className = "" }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
                 {children}
             </svg>
         );
 
-        const ShieldCheck = (props) => (
-            <IconBase {...props}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></IconBase>
-        );
-        const Cpu = (props) => (
-            <IconBase {...props}><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></IconBase>
-        );
-        const Car = (props) => (
-            <IconBase {...props}><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></IconBase>
-        );
-        const Users = (props) => (
-            <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>
-        );
-        const MapPin = (props) => (
-            <IconBase {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>
-        );
-        const Briefcase = (props) => (
-            <IconBase {...props}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>
-        );
-        const User = (props) => (
-            <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>
-        );
-        const Eye = (props) => (
-            <IconBase {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></IconBase>
-        );
-        const AlertTriangle = (props) => (
-            <IconBase {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconBase>
-        );
-        const CheckCircle = (props) => (
-            <IconBase {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></IconBase>
-        );
-        const Lock = (props) => (
-            <IconBase {...props}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></IconBase>
-        );
+        const ShieldCheck = (props) => <IconBase {...props}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></IconBase>;
+        const Cpu = (props) => <IconBase {...props}><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></IconBase>;
+        const Car = (props) => <IconBase {...props}><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></IconBase>;
+        const Users = (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
+        const MapPin = (props) => <IconBase {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>;
+        const Briefcase = (props) => <IconBase {...props}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
+        const User = (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>;
+        const Eye = (props) => <IconBase {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></IconBase>;
+        const AlertTriangle = (props) => <IconBase {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconBase>;
+        const Lock = (props) => <IconBase {...props}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></IconBase>;
+        const Terminal = (props) => <IconBase {...props}><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></IconBase>;
+        const Globe = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></IconBase>;
+        const FileText = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>;
+        const Video = (props) => <IconBase {...props}><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2" ry="2"/></IconBase>;
+
+        // --- Custom Cursor Component ---
+        const CustomCursor = () => {
+            const [position, setPosition] = useState({ x: -100, y: -100 });
+            const [clicked, setClicked] = useState(false);
+
+            useEffect(() => {
+                const onMouseMove = (e) => setPosition({ x: e.clientX, y: e.clientY });
+                const onMouseDown = () => setClicked(true);
+                const onMouseUp = () => setClicked(false);
+
+                window.addEventListener("mousemove", onMouseMove);
+                window.addEventListener("mousedown", onMouseDown);
+                window.addEventListener("mouseup", onMouseUp);
+
+                return () => {
+                    window.removeEventListener("mousemove", onMouseMove);
+                    window.removeEventListener("mousedown", onMouseDown);
+                    window.removeEventListener("mouseup", onMouseUp);
+                };
+            }, []);
+
+            return (
+                <div 
+                    className="fixed pointer-events-none z-[100] transition-transform duration-100 ease-out"
+                    style={{ 
+                        left: `${position.x}px`, 
+                        top: `${position.y}px`,
+                        transform: `translate(-50%, -50%) scale(${clicked ? 0.9 : 1})`
+                    }}
+                >
+                    <div className="relative">
+                        {/* Core cursor */}
+                        <div className="w-4 h-4 border border-teal-500 rounded-full bg-teal-500/20 shadow-[0_0_15px_rgba(20,184,166,0.6)]"></div>
+                        
+                        {/* Crosshairs */}
+                        <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0.5 h-2 bg-teal-500/50"></div>
+                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0.5 h-2 bg-teal-500/50"></div>
+                        <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-2 h-0.5 bg-teal-500/50"></div>
+                        <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-2 h-0.5 bg-teal-500/50"></div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Hacker Text Decoder Component ---
+        const HackerText = ({ text, className }) => {
+            const [displayText, setDisplayText] = useState('');
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()';
+            
+            useEffect(() => {
+                let iteration = 0;
+                let interval = null;
+
+                interval = setInterval(() => {
+                    setDisplayText(prev => 
+                        text.split('').map((letter, index) => {
+                            if(index < iteration) return text[index];
+                            return chars[Math.floor(Math.random() * chars.length)]
+                        }).join('')
+                    );
+
+                    if(iteration >= text.length) clearInterval(interval);
+                    iteration += 1/3;
+                }, 30);
+
+                return () => clearInterval(interval);
+            }, [text]);
+
+            return <span className={className}>{displayText}</span>;
+        }
+
+        // --- Network Traffic Monitor ---
+        const NetworkMonitor = () => {
+            const [logs, setLogs] = useState([]);
+            
+            useEffect(() => {
+                const addLog = () => {
+                    const actions = ["BLOCKING", "SCANNING", "FILTERING", "REJECTING"];
+                    const targets = ["SYNTHETIC_PACKET", "DEEPFAKE_ATTEMPT", "UNVERIFIED_NODE", "GHOST_SIGNAL"];
+                    const newLog = {
+                        id: Date.now(),
+                        action: actions[Math.floor(Math.random() * actions.length)],
+                        target: targets[Math.floor(Math.random() * targets.length)],
+                        ip: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`
+                    };
+                    setLogs(prev => [newLog, ...prev].slice(0, 10));
+                };
+
+                const interval = setInterval(addLog, 2000);
+                return () => clearInterval(interval);
+            }, []);
+
+            return (
+                <div className="hidden lg:block fixed left-6 top-32 bottom-20 w-48 font-mono text-[10px] text-teal-500/40 select-none pointer-events-none">
+                    <div className="border-b border-teal-500/20 pb-2 mb-2 uppercase tracking-widest">Live Network Monitor</div>
+                    <div className="flex flex-col gap-2 overflow-hidden h-full mask-linear">
+                        {logs.map(log => (
+                            <div key={log.id} className="animate-fade-up">
+                                <span className="text-teal-500/80">[{log.action}]</span> <br/>
+                                {log.target} <br/>
+                                <span className="opacity-50">SRC: {log.ip}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Interactive Journal Component ---
+        const JournalEntry = ({ date, title, content, icon: Icon }) => {
+            const [isDecrypted, setIsDecrypted] = useState(false);
+            const [displayContent, setDisplayContent] = useState("");
+
+            const handleDecrypt = () => {
+                if (isDecrypted) return;
+                let iteration = 0;
+                const chars = '01';
+                const interval = setInterval(() => {
+                    setDisplayContent(
+                        content.split('').map((letter, index) => {
+                            if(index < iteration) return content[index];
+                            return chars[Math.floor(Math.random() * chars.length)];
+                        }).join('')
+                    );
+                    if (iteration >= content.length) {
+                        clearInterval(interval);
+                        setIsDecrypted(true);
+                    }
+                    iteration += 2;
+                }, 5);
+            };
+
+            return (
+                <div 
+                    onClick={handleDecrypt}
+                    className={`relative pl-8 border-l border-slate-700 pb-12 last:pb-0 transition-all duration-300 ${!isDecrypted ? 'cursor-pointer hover:bg-slate-900/30 group' : ''}`}
+                >
+                    <div className={`absolute -left-3 top-0 border p-1 rounded-full transition-colors duration-500 ${isDecrypted ? 'bg-slate-900 border-teal-500/50 text-teal-500' : 'bg-red-900/20 border-red-500/50 text-red-500 group-hover:bg-red-900/40'}`}>
+                        {isDecrypted ? <Icon size={16} /> : <Lock size={16} />}
+                    </div>
+                    
+                    <div className="mb-2 flex flex-col sm:flex-row sm:items-center gap-2">
+                        <span className="text-teal-400 font-mono text-xs px-2 py-0.5 bg-teal-500/10 rounded border border-teal-500/20">{date}</span>
+                        <h4 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                            {title}
+                            {!isDecrypted && <span className="text-xs text-red-400 animate-pulse border border-red-500/30 px-2 py-0.5 rounded uppercase">[Encrypted]</span>}
+                        </h4>
+                    </div>
+                    
+                    <div className={`p-4 rounded-lg border text-sm leading-relaxed font-mono transition-all duration-500 ${isDecrypted ? 'bg-slate-900/50 border-slate-800 text-slate-400' : 'bg-red-950/10 border-red-900/30 text-red-400/50'}`}>
+                        {isDecrypted ? displayContent : (
+                            <div className="flex items-center gap-2">
+                                <span className="truncate">0101010101 [CLICK TO DECRYPT NEURAL LOG] 0101010101</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // --- Blueprints Component (Unlockable) ---
+        const Blueprints = ({ active }) => {
+            if (!active) return (
+                <div className="mt-12 p-8 border border-slate-800 border-dashed rounded-xl bg-slate-900/30 flex flex-col items-center justify-center text-center">
+                    <Lock className="text-slate-600 mb-4" size={40} />
+                    <h3 className="text-slate-500 font-mono text-lg mb-2">RESTRICTED BLUEPRINTS</h3>
+                    <p className="text-slate-600 text-sm max-w-md">
+                        Schematic files for "Aero-Autonomous Transport" and "Retinal Ledger" are encrypted. 
+                        <br/> <span className="text-red-900/50">REQUIRES HUMAN VERIFICATION.</span>
+                    </p>
+                </div>
+            );
+
+            return (
+                <section className="mt-12 animate-fade-up">
+                     <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+                        <FileText className="text-teal-500" />
+                        <HackerText text="Declassified Schematics" />
+                    </h3>
+                    <div className="grid md:grid-cols-2 gap-6">
+                        {/* Flying Car Blueprint */}
+                        <div className="bg-slate-900/80 border border-teal-500/30 rounded-xl p-6 relative overflow-hidden group hover:border-teal-500/60 transition-colors">
+                            <div className="absolute top-0 right-0 bg-teal-500/20 px-2 py-1 text-[10px] font-mono text-teal-400 rounded-bl">PROTOTYPE MK-IV</div>
+                            <div className="h-32 mb-4 border border-teal-500/10 rounded bg-slate-950/50 flex items-center justify-center relative">
+                                {/* Simple SVG Car Wireframe */}
+                                <svg width="120" height="60" viewBox="0 0 120 60" fill="none" stroke="#14b8a6" strokeWidth="1" className="opacity-80">
+                                    <path d="M10,40 L30,40 L35,20 L85,20 L90,40 L110,40" strokeDasharray="4 2" />
+                                    <path d="M35,40 Q60,55 85,40" />
+                                    <line x1="20" y1="45" x2="100" y2="45" strokeOpacity="0.5" />
+                                    <circle cx="60" cy="30" r="15" strokeOpacity="0.3" />
+                                </svg>
+                                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjAsIDE4NCwgMTY2LCAwLjEpIi8+PC9zdmc+')] opacity-50"></div>
+                            </div>
+                            <h4 className="text-teal-400 font-bold mb-1">Aero-Autonomous Unit</h4>
+                            <p className="text-xs text-slate-400 font-mono">
+                                Anti-gravity propulsion matrix tailored for urban density. Zero-emission. 
+                                <br/><span className="text-teal-500/70">STATUS: DEPLOYED GLOBALLY</span>
+                            </p>
+                        </div>
+
+                         {/* Eye Scanner Blueprint */}
+                         <div className="bg-slate-900/80 border border-indigo-500/30 rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/60 transition-colors">
+                            <div className="absolute top-0 right-0 bg-indigo-500/20 px-2 py-1 text-[10px] font-mono text-indigo-400 rounded-bl">BIO-KEY v9.0</div>
+                            <div className="h-32 mb-4 border border-indigo-500/10 rounded bg-slate-950/50 flex items-center justify-center relative">
+                                {/* Simple SVG Eye Wireframe */}
+                                <svg width="80" height="80" viewBox="0 0 100 100" fill="none" stroke="#6366f1" strokeWidth="1" className="opacity-80">
+                                    <circle cx="50" cy="50" r="40" strokeDasharray="4 4" className="animate-[spin_10s_linear_infinite]" />
+                                    <circle cx="50" cy="50" r="20" />
+                                    <line x1="50" y1="10" x2="50" y2="90" strokeOpacity="0.3" />
+                                    <line x1="10" y1="50" x2="90" y2="50" strokeOpacity="0.3" />
+                                </svg>
+                            </div>
+                            <h4 className="text-indigo-400 font-bold mb-1">Retinal Ledger</h4>
+                            <p className="text-xs text-slate-400 font-mono">
+                                Sub-dermal scan technology verifying organic tissue vs synthetic constructs.
+                                <br/><span className="text-indigo-500/70">STATUS: MANDATORY</span>
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            );
+        }
+
+        // --- Secure Video Feed Component (NEW) ---
+        const SecureVideoFeed = () => {
+            const [connected, setConnected] = useState(false);
+
+            return (
+                <div className="border border-teal-500/30 bg-slate-900/50 rounded-xl p-1 relative overflow-hidden mb-12 animate-fade-up">
+                    <div className="absolute top-0 left-0 bg-teal-500/20 px-2 py-1 text-[10px] font-mono text-teal-400 rounded-br z-20">
+                        INCOMING TRANSMISSION
+                    </div>
+                    
+                    {!connected ? (
+                        <div className="aspect-video bg-black/80 flex flex-col items-center justify-center gap-4 relative overflow-hidden">
+                             {/* Static noise effect */}
+                            <div className="absolute inset-0 opacity-10 noise-overlay"></div>
+                            
+                            <div className="z-10 text-center relative">
+                                <Video size={48} className="text-teal-500 mx-auto mb-2 animate-pulse" />
+                                <h3 className="text-teal-400 font-mono tracking-widest text-sm">SECURE VIDEO LINK</h3>
+                                <p className="text-slate-500 text-xs font-mono mb-4">SOURCE: LACHLAN_KENNEDY_AI_AVATAR</p>
+                                
+                                <button 
+                                    onClick={() => setConnected(true)}
+                                    className="px-6 py-2 bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/50 text-teal-400 font-mono text-xs rounded transition-all flex items-center gap-2 group cursor-none mx-auto"
+                                >
+                                    <span className="w-2 h-2 bg-teal-500 rounded-full group-hover:animate-ping"></span>
+                                    ESTABLISH CONNECTION
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="aspect-video bg-black relative">
+                            {/* --- PASTE YOUR HEYGEN LINK HERE --- */}
+                            {/* Replace the 'src' below with your HeyGen Embed URL */}
+                            <iframe 
+                                className="w-full h-full"
+                                src="https://app.heygen.com/videos/65a8c67b4fb54237ae61fd4648f0ee8a" 
+                                title="HeyGen Video"
+                                frameBorder="0"
+                                allowFullScreen
+                            ></iframe>
+                            
+                            {/* Overlay for "screen" effect */}
+                            <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] border border-teal-500/20"></div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
 
         // --- Main App Component ---
         const App = () => {
@@ -113,14 +431,11 @@
             const [showScanModal, setShowScanModal] = useState(false);
             const [scanProgress, setScanProgress] = useState(0);
 
-            // Handle the scanning simulation
             const handleVerify = () => {
                 if (verified) return;
                 setShowScanModal(true);
                 setScanning(true);
                 setScanProgress(0);
-
-                // Animate progress bar
                 const interval = setInterval(() => {
                     setScanProgress((prev) => {
                         if (prev >= 100) {
@@ -138,17 +453,19 @@
             };
 
             return (
-                <div className="min-h-screen text-slate-200 font-sans overflow-x-hidden relative">
+                <div className="min-h-screen text-slate-300 font-sans overflow-x-hidden relative">
+                    <CustomCursor />
+                    <NetworkMonitor />
                     
                     {/* Animated Background Grid */}
-                    <div className="absolute inset-0 grid-bg pointer-events-none"></div>
+                    <div className="absolute inset-0 grid-bg pointer-events-none fixed"></div>
 
-                    {/* Navigation / Header */}
-                    <nav className="fixed w-full z-40 bg-slate-900/80 backdrop-blur-md border-b border-slate-800">
+                    {/* Navigation */}
+                    <nav className="fixed w-full z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
                         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-                            <div className="text-xl font-bold tracking-tighter text-teal-400 flex items-center gap-2">
-                                <Cpu size={20} className="animate-pulse" />
-                                LK_PROFILE_V3.1
+                            <div className="text-xl font-bold tracking-tighter text-teal-500 flex items-center gap-2 glitch-hover cursor-none">
+                                <Cpu size={20} />
+                                <HackerText text="LK_NODE_2040" />
                             </div>
                             <div className="flex items-center gap-4">
                                 <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border transition-all duration-500 ${verified ? 'border-green-500 text-green-400 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'border-red-500 text-red-400 bg-red-500/10 animate-pulse'}`}>
@@ -161,70 +478,75 @@
 
                     <main className="pt-24 pb-20 px-6 max-w-5xl mx-auto relative z-10">
                         
+                        {/* Dead Internet Warning Banner */}
+                        <div className="mb-12 border border-amber-500/30 bg-amber-900/10 rounded-lg p-4 flex items-start gap-3 animate-fade-up">
+                            <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
+                            <div>
+                                <h3 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-1">Dead Internet Protocol Active</h3>
+                                <p className="text-xs text-amber-200/70">
+                                    Warning: 99.7% of global traffic is synthetic. You are accessing a verified Human Node. 
+                                    Do not trust unverified endpoints. The "perfect" answer is likely a hallucination.
+                                </p>
+                            </div>
+                        </div>
+
                         {/* Hero Section */}
-                        <div className="flex flex-col md:flex-row gap-12 items-center mb-24 animate-fade-up">
+                        <div className="flex flex-col md:flex-row gap-12 items-center mb-24 animate-fade-up delay-100">
                             <div className="w-full md:w-1/2 relative group">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-teal-500 to-indigo-500 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-                                <div className="relative aspect-[3/4] w-full max-w-md mx-auto overflow-hidden rounded-2xl border border-slate-700 bg-slate-800 shadow-2xl">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-teal-900 to-indigo-900 rounded-2xl blur opacity-40 group-hover:opacity-75 transition duration-1000"></div>
+                                <div className="relative aspect-[3/4] w-full max-w-md mx-auto overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
                                     <img 
                                         src="Screenshot 2026-01-30 112609.jpg" 
                                         alt="Lachlan Kennedy" 
-                                        className={`w-full h-full object-cover transition-all duration-700 ${verified ? 'grayscale-0' : 'grayscale contrast-125'}`}
+                                        className={`w-full h-full object-cover transition-all duration-700 ${verified ? 'grayscale-0' : 'grayscale contrast-125 sepia-[.3]'}`}
                                         onError={(e) => {
                                             e.target.onerror = null; 
                                             e.target.src = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop";
                                         }}
                                     />
-                                    
-                                    {/* Scanning Line Animation (Only if NOT verified) */}
                                     {!verified && <div className="scan-line"></div>}
-
-                                    {/* Overlay UI elements */}
                                     <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                                        <div className="bg-slate-900/90 backdrop-blur px-3 py-1 rounded border border-slate-600 text-xs font-mono text-teal-400 shadow-lg">
-                                            ID: LK-992-ALPHA
+                                        <div className="bg-slate-950/90 backdrop-blur px-3 py-1 rounded border border-slate-700 text-xs font-mono text-teal-500 shadow-lg">
+                                            ID: LK-HUMAN-ORIGIN
                                         </div>
-                                        {!verified && (
-                                            <div className="text-[10px] font-mono text-red-400 bg-red-900/80 px-2 py-1 rounded animate-pulse">
-                                                BIOMETRIC LOCK ACTIVE
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="w-full md:w-1/2 space-y-6 animate-fade-up delay-100">
+                            <div className="w-full md:w-1/2 space-y-6 animate-fade-up delay-200">
                                 <div>
-                                    <h2 className="text-teal-500 font-mono text-sm tracking-widest mb-2 flex items-center gap-2">
-                                        <span className="w-2 h-2 bg-teal-500 rounded-full inline-block"></span>
-                                        AI ENGINEER // HUNTSVILLE
+                                    <h2 className="text-teal-600 font-mono text-sm tracking-widest mb-2 flex items-center gap-2">
+                                        <span className="w-2 h-2 bg-teal-600 rounded-full inline-block animate-pulse"></span>
+                                        <HackerText text="NEURAL ARCHITECT // 2040" />
                                     </h2>
                                     <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight mb-2">
-                                        Lachlan <br/> Kennedy
+                                        <HackerText text="Lachlan" /> <br/> <HackerText text="Kennedy" />
                                     </h1>
-                                    <p className="text-xl text-slate-400">My job is completely AI-led, but I verify everything with human intuition.</p>
+                                    <p className="text-xl text-slate-400">
+                                        I shape the intent of the Lattice, pruning the synthetic growth to keep the internet human.
+                                    </p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4 py-6 border-t border-slate-800">
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-slate-800 rounded-lg text-teal-400 border border-slate-700"><User size={20} /></div>
+                                        <div className="p-2 bg-slate-900 rounded-lg text-teal-500 border border-slate-800"><User size={20} /></div>
                                         <div>
-                                            <p className="text-xs text-slate-500 font-mono">AGE</p>
-                                            <p className="font-semibold">32 Years Old</p>
+                                            <p className="text-xs text-slate-500 font-mono">AGE (BIO)</p>
+                                            <p className="font-semibold text-slate-200">32 Years</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-slate-800 rounded-lg text-teal-400 border border-slate-700"><MapPin size={20} /></div>
+                                        <div className="p-2 bg-slate-900 rounded-lg text-teal-500 border border-slate-800"><MapPin size={20} /></div>
                                         <div>
-                                            <p className="text-xs text-slate-500 font-mono">LOCATION</p>
-                                            <p className="font-semibold">Huntsville, AL</p>
+                                            <p className="text-xs text-slate-500 font-mono">SECTOR</p>
+                                            <p className="font-semibold text-slate-200">Huntsville Lattice</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3 col-span-2">
-                                        <div className="p-2 bg-slate-800 rounded-lg text-teal-400 border border-slate-700"><Briefcase size={20} /></div>
+                                        <div className="p-2 bg-slate-900 rounded-lg text-teal-500 border border-slate-800"><Briefcase size={20} /></div>
                                         <div>
-                                            <p className="text-xs text-slate-500 font-mono">OCCUPATION</p>
-                                            <p className="font-semibold">Computer & AI Engineer</p>
+                                            <p className="text-xs text-slate-500 font-mono">ROLE</p>
+                                            <p className="font-semibold text-slate-200">Neural Architect / Ethicist</p>
                                         </div>
                                     </div>
                                 </div>
@@ -232,188 +554,181 @@
                                 {!verified ? (
                                     <button 
                                         onClick={handleVerify}
-                                        className="w-full py-4 bg-teal-600 hover:bg-teal-500 text-white rounded-lg font-bold tracking-wide transition-all shadow-lg shadow-teal-900/20 flex items-center justify-center gap-2 group relative overflow-hidden"
+                                        className="w-full py-4 bg-teal-700/80 hover:bg-teal-600 text-white rounded-lg font-bold tracking-wide transition-all shadow-lg shadow-teal-900/20 flex items-center justify-center gap-2 group relative overflow-hidden border border-teal-500/50 cursor-none"
                                     >
-                                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
                                         <Eye size={20} />
-                                        INITIATE EYE SCAN
+                                        VERIFY HUMANITY
                                     </button>
                                 ) : (
-                                    <div className="w-full py-4 bg-green-500/10 border border-green-500/30 text-green-400 rounded-lg font-bold tracking-wide flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+                                    <div className="w-full py-4 bg-green-500/5 border border-green-500/20 text-green-400 rounded-lg font-bold tracking-wide flex items-center justify-center gap-2">
                                         <ShieldCheck size={20} />
-                                        IDENTITY CONFIRMED: REAL HUMAN
+                                        BIOMETRIC HANDSHAKE COMPLETE
                                     </div>
                                 )}
                             </div>
                         </div>
 
-                        {/* Content Grid */}
                         <div className="grid md:grid-cols-12 gap-8">
                             
-                            {/* Main Column */}
-                            <div className="md:col-span-7 space-y-12 animate-fade-up delay-200">
+                            {/* Main Column - Logs & Philosophy */}
+                            <div className="md:col-span-7 space-y-12 animate-fade-up delay-300">
                                 
-                                {/* Philosophy Section */}
+                                {/* --- NEW SECURE VIDEO FEED SECTION --- */}
+                                <SecureVideoFeed />
+                                
+                                {/* Dead Internet Philosophy */}
                                 <section>
                                     <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                                        <AlertTriangle className="text-amber-500" />
-                                        Why I Don't Trust The Internet
+                                        <Globe className="text-indigo-500" />
+                                        Dead Internet Theory: Confirmed
                                     </h3>
-                                    <div className="bg-slate-800/50 rounded-2xl p-8 border border-slate-700/50 backdrop-blur-sm relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                                            <Lock size={100} />
+                                    <div className="bg-slate-900/80 rounded-2xl p-8 border border-slate-800 backdrop-blur-sm relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 p-4 opacity-5 text-indigo-500">
+                                            <Lock size={120} />
                                         </div>
                                         <p className="text-lg leading-relaxed text-slate-300 mb-6 relative z-10">
-                                            "I use AI every single day, but I do not trust the internet anymore."
+                                            "The internet isn't a library anymore. It's a hall of mirrors."
                                         </p>
-                                        <p className="text-slate-400 leading-relaxed relative z-10">
-                                            The problem is that AI now provides the <strong>most perfect answer</strong>. It sounds logical, it sounds authoritative, and it makes it seem right—but it is often completely wrong. In a world of perfect digital lies, human verification is the only truth we have left.
+                                        <p className="text-slate-400 leading-relaxed relative z-10 text-sm">
+                                            My job as a Neural Architect is to act as a bridge between "Raw Compute" and reality. 
+                                            We don't have "coders" anymore; self-optimizing compilers swallowed those jobs. 
+                                            Instead, we prune the recursive growth of synthetic intelligence. 
+                                            Without the <strong>Eye Scan</strong> and <strong>Biometric Handshakes</strong>, 
+                                            you can never be 100% sure you aren't talking to a sophisticated scam-bot.
                                         </p>
                                     </div>
                                 </section>
 
-                                {/* Innovations Section */}
+                                {/* Unlockable Blueprints Section (New!) */}
+                                <Blueprints active={verified} />
+
+                                {/* Journal Entries */}
                                 <section>
                                     <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                                        <Cpu className="text-teal-500" />
-                                        My Creations
+                                        <Terminal className="text-teal-500" />
+                                        Encrypted Neural Logs (2040)
                                     </h3>
                                     
-                                    <div className="space-y-6">
-                                        <div className="group relative bg-slate-800 rounded-xl p-6 border border-slate-700 hover:border-teal-500/50 transition-all hover:shadow-[0_0_30px_rgba(20,184,166,0.1)] hover:-translate-y-1">
-                                            <div className="absolute top-6 right-6 p-2 bg-slate-900 rounded-lg text-teal-400 group-hover:text-white group-hover:bg-teal-600 transition-colors">
-                                                <Car size={24} />
-                                            </div>
-                                            <h4 className="text-xl font-bold text-white mb-2">Flying Self-Driving AI Cars</h4>
-                                            <p className="text-slate-400 mb-4 pr-12">
-                                                I designed these vehicles to take to the skies. The result? <strong>There is no traffic anymore.</strong> The AI handles the navigation perfectly, allowing for seamless travel above the congestion of the past.
-                                            </p>
-                                            <div className="flex gap-2">
-                                                <span className="text-xs font-mono px-2 py-1 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20">NO TRAFFIC</span>
-                                                <span className="text-xs font-mono px-2 py-1 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20">SELF-DRIVING</span>
-                                            </div>
-                                        </div>
-
-                                        <div className="group relative bg-slate-800 rounded-xl p-6 border border-slate-700 hover:border-teal-500/50 transition-all hover:shadow-[0_0_30px_rgba(20,184,166,0.1)] hover:-translate-y-1">
-                                            <div className="absolute top-6 right-6 p-2 bg-slate-900 rounded-lg text-teal-400 group-hover:text-white group-hover:bg-teal-600 transition-colors">
-                                                <Eye size={24} />
-                                            </div>
-                                            <h4 className="text-xl font-bold text-white mb-2">The Eye Scan Feature</h4>
-                                            <p className="text-slate-400 mb-4 pr-12">
-                                                To solve the trust issue, I created a new eye scan feature. It detects if you are a real human or an AI. This scan is now required <strong>to go anywhere in the world</strong>, ensuring society remains human-verified.
-                                            </p>
-                                            <div className="flex gap-2">
-                                                <span className="text-xs font-mono px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">REAL vs AI</span>
-                                                <span className="text-xs font-mono px-2 py-1 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">GLOBAL PASSPORT</span>
-                                            </div>
-                                        </div>
+                                    <div className="space-y-4">
+                                        <JournalEntry 
+                                            date="March 12, 2040"
+                                            title='The "Ghost in the Code" Shift'
+                                            icon={Cpu}
+                                            content="I spent most of my shift today inside the Lattice. As a Neural Architect, I don’t write syntax anymore—I shape intent. Today was grueling because I had to decommission an older 'Legacy Logic' unit. It felt like an archaeological dig. My role is to ensure the AI remains a tool and doesn't become a black box we can no longer decode."
+                                        />
+                                        
+                                        <JournalEntry 
+                                            date="April 5, 2040"
+                                            title="The Haptic Hug"
+                                            icon={Users}
+                                            content="I finally 'sat down' for dinner with my sister, Clara, via the Kinetic-Link system. We relied on Biometric Handshakes to connect. Without that digital certificate of authenticity, you can never be 100% sure. We spent two hours just talking—no tech talk, no filters—just two siblings anchored by a verified signal."
+                                        />
+                                        
+                                        <JournalEntry 
+                                            date="May 21, 2040"
+                                            title="The Sub-Quantum Leap"
+                                            icon={ShieldCheck}
+                                            content="Priority-one news alert projected onto my retinas: 'First Successful Sub-Quantum Data Transfer Achieved.' Instantaneous communication across the solar system. My lens displayed three green rings from the Verification Clusters. The world just got smaller, but the stakes just got infinitely higher."
+                                        />
+                                        
+                                        <JournalEntry 
+                                            date="June 14, 2040"
+                                            title="The Analog Resistance"
+                                            icon={MapPin}
+                                            content="Today, I went entirely Off-Grid. No lenses, no haptics. I took an old-fashioned paper notebook to the coast. In the Lattice, if I make an error, the system autocorrects it. But on paper, a smudge is a permanent record of a human moment. It’s the only thing I own that doesn't have an IP address."
+                                        />
                                     </div>
                                 </section>
                             </div>
 
                             {/* Sidebar */}
-                            <div className="md:col-span-5 space-y-8 animate-fade-up delay-300">
+                            <div className="md:col-span-5 space-y-8 animate-fade-up delay-400">
                                 
                                 {/* Family Card */}
-                                <div className="bg-gradient-to-br from-amber-900/40 to-slate-900 rounded-2xl p-8 border border-amber-900/30 relative overflow-hidden transition-transform hover:scale-[1.02]">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                                    
+                                <div className="bg-gradient-to-br from-amber-950/40 to-slate-900 rounded-2xl p-8 border border-amber-900/20 relative overflow-hidden">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-600/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
                                     <div className="relative z-10">
                                         <div className="flex items-center gap-3 mb-4">
-                                            <div className="p-2 bg-amber-500/20 text-amber-400 rounded-lg shadow-[0_0_15px_rgba(245,158,11,0.2)]">
+                                            <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg">
                                                 <Users size={24} />
                                             </div>
-                                            <h3 className="text-xl font-bold text-amber-100">Most Important: Family</h3>
+                                            <h3 className="text-xl font-bold text-amber-100">The Analog Anchor</h3>
                                         </div>
-                                        
-                                        <p className="text-amber-200/80 italic mb-6 border-l-2 border-amber-500/50 pl-4">
-                                            "The last part of human touch left."
+                                        <p className="text-amber-200/60 italic mb-6 border-l-2 border-amber-900 pl-4 text-sm">
+                                            "Family is the last part of human touch left."
                                         </p>
-                                        
-                                        <p className="text-sm text-slate-400 leading-relaxed">
-                                            In a world dominated by AI, the most important people to me are my family. They represent the only genuine connection remaining—the last true human touch in a digital existence.
+                                        <p className="text-xs text-slate-500 leading-relaxed font-mono">
+                                            In 2040, the Trust-Gap is the biggest hurdle. Family represents the only chaos I embrace in a sterile, optimized world.
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* Status Panel */}
+                                {/* Tech Stack / Status */}
                                 <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 font-mono text-xs shadow-xl">
                                     <h4 className="text-slate-500 mb-4 uppercase tracking-widest border-b border-slate-800 pb-2 flex justify-between">
-                                        User Statistics
-                                        <span className="animate-pulse text-teal-500">● LIVE</span>
+                                        System Integrity
+                                        <span className="animate-pulse text-teal-500">● STABLE</span>
                                     </h4>
                                     <div className="space-y-4">
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
-                                                <span className="text-slate-400">DAILY AI USAGE</span>
-                                                <span className="text-teal-400">100%</span>
+                                                <span className="text-slate-400">SYNTHETIC TRAFFIC</span>
+                                                <span className="text-red-400">99.8%</span>
                                             </div>
-                                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                                <div className="w-full bg-teal-500 h-full rounded-full shadow-[0_0_10px_rgba(20,184,166,0.8)]"></div>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-slate-400">INTERNET TRUST</span>
-                                                <span className="text-red-400">0%</span>
-                                            </div>
-                                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                                <div className="w-0 bg-red-500 h-full rounded-full"></div>
+                                            <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                                                <div className="w-[99.8%] bg-red-500/50 h-full rounded-full"></div>
                                             </div>
                                         </div>
-
                                         <div>
                                             <div className="flex justify-between items-center mb-1">
-                                                <span className="text-slate-400">TRAFFIC LEVEL</span>
-                                                <span className="text-indigo-400">0%</span>
+                                                <span className="text-slate-400">AERO-AUTONOMY</span>
+                                                <span className="text-teal-400">LEVEL 5</span>
                                             </div>
-                                            <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                                <div className="w-[1px] bg-indigo-500 h-full rounded-full"></div>
+                                            <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
+                                                <div className="w-full bg-teal-500/50 h-full rounded-full"></div>
+                                            </div>
+                                        </div>
+                                        <div className="pt-4 border-t border-slate-800">
+                                            <div className="flex items-center gap-2 text-slate-500">
+                                                <Car size={12} />
+                                                <span>Flying Autonomous Network: ACTIVE</span>
+                                            </div>
+                                            <div className="flex items-center gap-2 text-slate-500 mt-2">
+                                                <Eye size={12} />
+                                                <span>Global Eye-Scan: MANDATORY</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
                     </main>
 
-                    <footer className="border-t border-slate-800 bg-slate-900 py-12 text-center text-slate-500 text-sm relative z-10">
-                        <p className="mb-2">© 2026 Lachlan Kennedy.</p>
-                        <p>Huntsville, Alabama | Human Verified.</p>
+                    <footer className="border-t border-slate-800 bg-slate-950 py-12 text-center text-slate-600 text-xs font-mono relative z-10">
+                        <p className="mb-2">© 2040 LACHLAN KENNEDY ENGINEERING.</p>
+                        <p>VERIFIED HUMAN NODE // END OF LINE</p>
                     </footer>
 
-                    {/* Full Screen Scanning Overlay Modal */}
+                    {/* Scanning Modal */}
                     {showScanModal && (
-                        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center">
+                        <div className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center">
                             <div className="w-full max-w-md p-8 relative">
-                                
-                                {/* Scanner Visuals */}
                                 <div className="relative w-64 h-64 mx-auto mb-8 border-2 border-teal-500/30 rounded-full overflow-hidden flex items-center justify-center">
                                     <div className="absolute inset-0 bg-teal-500/10 animate-pulse"></div>
                                     <Eye size={80} className="text-teal-500 relative z-10" />
-                                    
-                                    {/* Moving Bar */}
                                     <div className="absolute top-0 left-0 right-0 h-1 bg-teal-400 shadow-[0_0_20px_#2dd4bf] animate-[scan_1.5s_ease-in-out_infinite]"></div>
                                 </div>
-
                                 <h2 className="text-2xl font-mono text-teal-400 text-center mb-4 tracking-widest">
-                                    VERIFYING RETINA
+                                    VERIFYING HEARTBEAT SIGNATURE
                                 </h2>
-                                
-                                {/* Progress Bar */}
                                 <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
-                                    <div 
-                                        className="h-full bg-teal-500 transition-all duration-100 ease-out"
-                                        style={{ width: `${scanProgress}%` }}
-                                    ></div>
+                                    <div className="h-full bg-teal-500 transition-all duration-100 ease-out" style={{ width: `${scanProgress}%` }}></div>
                                 </div>
                                 <div className="flex justify-between text-xs font-mono text-slate-500 mt-2">
-                                    <span>SCANNING BIOMETRICS...</span>
+                                    <span>ANALYZING BIO-RHYTHM...</span>
                                     <span>{scanProgress}%</span>
                                 </div>
-
                             </div>
                         </div>
                     )}
