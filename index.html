@@ -16,7 +16,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* Custom Keyframes and Classes */
+        /* --- CORE ANIMATIONS --- */
         @keyframes scan {
           0%, 100% { top: 0%; opacity: 0; }
           10% { opacity: 1; }
@@ -38,19 +38,13 @@
           80% { transform: translate(2px, -2px); }
           100% { transform: translate(0); }
         }
-        @keyframes noise {
-            0%, 100% { background-position: 0 0; }
-            10% { background-position: -5% -10%; }
-            20% { background-position: -15% 5%; }
-            30% { background-position: 7% -25%; }
-            40% { background-position: 20% 25%; }
-            50% { background-position: -25% 10%; }
-            60% { background-position: 15% 5%; }
-            70% { background-position: 0% 15%; }
-            80% { background-position: 25% 35%; }
-            90% { background-position: -10% 10%; }
-        }
         
+        /* Holo Effect */
+        .holo-container:hover .holo-img {
+            animation: glitch 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+            filter: drop-shadow(2px 2px #ff00c1) drop-shadow(-2px -2px #00fff9);
+        }
+
         /* CRT Scanline Effect */
         .crt::before {
             content: " ";
@@ -88,21 +82,6 @@
             color: #f87171;
         }
 
-        .noise-overlay {
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            right: -50%;
-            bottom: -50%;
-            width: 200%;
-            height: 200vh;
-            background: transparent url('http://assets.iceable.com/img/noise-transparent.png') repeat 0 0;
-            background-repeat: repeat;
-            opacity: .05;
-            visibility: visible;
-            pointer-events: none;
-        }
-
         /* Blink cursor for terminal */
         .blink-cursor::after {
             content: '▋';
@@ -131,166 +110,116 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        // --- Icons Components ---
+        // --- AUDIO SYSTEM ---
+        const playSound = (type) => {
+            if (!window.AudioContext && !window.webkitAudioContext) return;
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioContext();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            const now = ctx.currentTime;
+
+            if (type === 'hover') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(1200, now + 0.05);
+                gain.gain.setValueAtTime(0.02, now); // Low volume
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                osc.start(now);
+                osc.stop(now + 0.05);
+            } else if (type === 'click') {
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.exponentialRampToValueAtTime(50, now + 0.1);
+                gain.gain.setValueAtTime(0.03, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            }
+        };
+
+        // --- ICONS ---
         const IconBase = ({ children, size = 24, className = "" }) => (
-            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-                {children}
-            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>{children}</svg>
         );
+        const ShieldCheck = (p) => <IconBase {...p}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></IconBase>;
+        const Cpu = (p) => <IconBase {...p}><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></IconBase>;
+        const Car = (p) => <IconBase {...p}><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></IconBase>;
+        const Users = (p) => <IconBase {...p}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
+        const MapPin = (p) => <IconBase {...p}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>;
+        const Briefcase = (p) => <IconBase {...p}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
+        const User = (p) => <IconBase {...p}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>;
+        const Eye = (p) => <IconBase {...p}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></IconBase>;
+        const AlertTriangle = (p) => <IconBase {...p}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconBase>;
+        const Lock = (p) => <IconBase {...p}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></IconBase>;
+        const Terminal = (p) => <IconBase {...p}><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></IconBase>;
+        const Globe = (p) => <IconBase {...p}><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></IconBase>;
+        const FileText = (p) => <IconBase {...p}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>;
+        const Video = (p) => <IconBase {...p}><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2" ry="2"/></IconBase>;
+        const Cloud = (p) => <IconBase {...p}><path d="M17.5 19c0-1.7-1.3-3-3-3h-1.1c-.1-2.6-2.2-4.6-4.8-4.6-2.2 0-4.1 1.5-4.7 3.6A3.8 3.8 0 0 0 5 22.8c2.1 0 3.8-1.7 3.8-3.8V19h8.8c1.7 0 3-1.3 3-3Z"/></IconBase>;
+        const Thermometer = (p) => <IconBase {...p}><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></IconBase>;
+        const Move = (p) => <IconBase {...p}><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></IconBase>;
+        const Book = (p) => <IconBase {...p}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></IconBase>;
+        const Volume2 = (p) => <IconBase {...p}><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></IconBase>;
 
-        const ShieldCheck = (props) => <IconBase {...props}><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></IconBase>;
-        const Cpu = (props) => <IconBase {...props}><rect width="16" height="16" x="4" y="4" rx="2"/><rect width="6" height="6" x="9" y="9" rx="1"/><path d="M15 2v2"/><path d="M15 20v2"/><path d="M2 15h2"/><path d="M2 9h2"/><path d="M20 15h2"/><path d="M20 9h2"/><path d="M9 2v2"/><path d="M9 20v2"/></IconBase>;
-        const Car = (props) => <IconBase {...props}><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></IconBase>;
-        const Users = (props) => <IconBase {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></IconBase>;
-        const MapPin = (props) => <IconBase {...props}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></IconBase>;
-        const Briefcase = (props) => <IconBase {...props}><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></IconBase>;
-        const User = (props) => <IconBase {...props}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></IconBase>;
-        const Eye = (props) => <IconBase {...props}><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></IconBase>;
-        const AlertTriangle = (props) => <IconBase {...props}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></IconBase>;
-        const Lock = (props) => <IconBase {...props}><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></IconBase>;
-        const Terminal = (props) => <IconBase {...props}><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></IconBase>;
-        const Globe = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" /></IconBase>;
-        const FileText = (props) => <IconBase {...props}><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></IconBase>;
-        const Video = (props) => <IconBase {...props}><path d="m22 8-6 4 6 4V8Z"/><rect x="2" y="6" width="14" height="12" rx="2" ry="2"/></IconBase>;
-        const Cloud = (props) => <IconBase {...props}><path d="M17.5 19c0-1.7-1.3-3-3-3h-1.1c-.1-2.6-2.2-4.6-4.8-4.6-2.2 0-4.1 1.5-4.7 3.6A3.8 3.8 0 0 0 5 22.8c2.1 0 3.8-1.7 3.8-3.8V19h8.8c1.7 0 3-1.3 3-3Z"/></IconBase>;
-        const Thermometer = (props) => <IconBase {...props}><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></IconBase>;
-        const Move = (props) => <IconBase {...props}><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></IconBase>;
-
-        // --- Animated Neural Lattice Background ---
+        // --- PARTICLE BACKGROUND ---
         const ParticleBackground = () => {
             const canvasRef = useRef(null);
             const mouseRef = useRef({ x: 0, y: 0 });
-            
             useEffect(() => {
                 const canvas = canvasRef.current;
                 const ctx = canvas.getContext('2d');
                 let width = canvas.width = window.innerWidth;
                 let height = canvas.height = window.innerHeight;
-                
-                const particles = [];
-                const particleCount = 70;
-                
-                class Particle {
-                    constructor() {
-                        this.x = Math.random() * width;
-                        this.y = Math.random() * height;
-                        this.vx = (Math.random() - 0.5) * 0.5;
-                        this.vy = (Math.random() - 0.5) * 0.5;
-                        this.size = Math.random() * 2 + 1;
-                    }
-                    
-                    update() {
-                        this.x += this.vx;
-                        this.y += this.vy;
-                        
-                        if (this.x < 0 || this.x > width) this.vx *= -1;
-                        if (this.y < 0 || this.y > height) this.vy *= -1;
-                    }
-                    
-                    draw() {
-                        ctx.beginPath();
-                        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                        ctx.fillStyle = '#14b8a6';
-                        ctx.fill();
-                    }
-                }
-                
-                for (let i = 0; i < particleCount; i++) {
-                    particles.push(new Particle());
-                }
-                
+                const particles = Array.from({length: 60}, () => ({
+                    x: Math.random() * width, y: Math.random() * height,
+                    vx: (Math.random()-0.5)*0.5, vy: (Math.random()-0.5)*0.5
+                }));
                 function animate() {
                     ctx.clearRect(0, 0, width, height);
-                    
                     particles.forEach(p => {
-                        p.update();
-                        p.draw();
+                        p.x += p.vx; p.y += p.vy;
+                        if(p.x < 0 || p.x > width) p.vx *= -1;
+                        if(p.y < 0 || p.y > height) p.vy *= -1;
+                        ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI*2); ctx.fillStyle = '#14b8a6'; ctx.fill();
                         
-                        // Connect to other particles
+                        // Connect particles
                         particles.forEach(p2 => {
-                            const dx = p.x - p2.x;
-                            const dy = p.y - p2.y;
-                            const distance = Math.sqrt(dx * dx + dy * dy);
-                            
-                            if (distance < 100) {
-                                ctx.beginPath();
-                                ctx.strokeStyle = `rgba(20, 184, 166, ${1 - distance / 100})`;
-                                ctx.lineWidth = 0.5;
-                                ctx.moveTo(p.x, p.y);
-                                ctx.lineTo(p2.x, p2.y);
-                                ctx.stroke();
-                            }
+                            const d = Math.hypot(p.x - p2.x, p.y - p2.y);
+                            if (d < 100) { ctx.beginPath(); ctx.strokeStyle=`rgba(20,184,166,${1-d/100})`; ctx.lineWidth=0.5; ctx.moveTo(p.x,p.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); }
                         });
-
-                        // Connect to mouse
-                        const dx = p.x - mouseRef.current.x;
-                        const dy = p.y - mouseRef.current.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-                        if (distance < 150) {
-                            ctx.beginPath();
-                            ctx.strokeStyle = `rgba(99, 102, 241, ${1 - distance / 150})`; // Indigo color for mouse
-                            ctx.lineWidth = 0.8;
-                            ctx.moveTo(p.x, p.y);
-                            ctx.lineTo(mouseRef.current.x, mouseRef.current.y);
-                            ctx.stroke();
-                        }
+                        // Connect mouse
+                        const dMouse = Math.hypot(p.x - mouseRef.current.x, p.y - mouseRef.current.y);
+                        if(dMouse < 150) { ctx.beginPath(); ctx.strokeStyle=`rgba(99,102,241,${1-dMouse/150})`; ctx.lineWidth=0.8; ctx.moveTo(p.x,p.y); ctx.lineTo(mouseRef.current.x,mouseRef.current.y); ctx.stroke(); }
                     });
-                    
                     requestAnimationFrame(animate);
                 }
-                
                 animate();
-                
-                const handleResize = () => {
-                    width = canvas.width = window.innerWidth;
-                    height = canvas.height = window.innerHeight;
-                };
-
-                const handleMouseMove = (e) => {
-                    mouseRef.current = { x: e.clientX, y: e.clientY };
-                }
-                
+                const handleResize = () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; };
+                const handleMouseMove = (e) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
                 window.addEventListener('resize', handleResize);
                 window.addEventListener('mousemove', handleMouseMove);
-                return () => {
-                    window.removeEventListener('resize', handleResize);
-                    window.removeEventListener('mousemove', handleMouseMove);
-                }
+                return () => { window.removeEventListener('resize', handleResize); window.removeEventListener('mousemove', handleMouseMove); };
             }, []);
-
             return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-0 opacity-20" />;
         };
 
-        // --- Custom Cursor Component ---
         const CustomCursor = () => {
-            const [position, setPosition] = useState({ x: -100, y: -100 });
+            const [pos, setPos] = useState({ x: -100, y: -100 });
             const [clicked, setClicked] = useState(false);
-
             useEffect(() => {
-                const onMouseMove = (e) => setPosition({ x: e.clientX, y: e.clientY });
-                const onMouseDown = () => setClicked(true);
-                const onMouseUp = () => setClicked(false);
-
-                window.addEventListener("mousemove", onMouseMove);
-                window.addEventListener("mousedown", onMouseDown);
-                window.addEventListener("mouseup", onMouseUp);
-
-                return () => {
-                    window.removeEventListener("mousemove", onMouseMove);
-                    window.removeEventListener("mousedown", onMouseDown);
-                    window.removeEventListener("mouseup", onMouseUp);
-                };
+                const move = (e) => setPos({ x: e.clientX, y: e.clientY });
+                const down = () => setClicked(true);
+                const up = () => setClicked(false);
+                window.addEventListener("mousemove", move);
+                window.addEventListener("mousedown", down);
+                window.addEventListener("mouseup", up);
+                return () => { window.removeEventListener("mousemove", move); window.removeEventListener("mousedown", down); window.removeEventListener("mouseup", up); };
             }, []);
-
             return (
-                <div 
-                    className="fixed pointer-events-none z-[100] transition-transform duration-100 ease-out"
-                    style={{ 
-                        left: `${position.x}px`, 
-                        top: `${position.y}px`,
-                        transform: `translate(-50%, -50%) scale(${clicked ? 0.9 : 1})`
-                    }}
-                >
+                <div className="fixed pointer-events-none z-[100] transition-transform duration-100 ease-out" style={{ left: pos.x, top: pos.y, transform: `translate(-50%, -50%) scale(${clicked ? 0.9 : 1})` }}>
                     <div className="relative">
                         <div className="w-4 h-4 border border-teal-500 rounded-full bg-teal-500/20 shadow-[0_0_15px_rgba(20,184,166,0.6)]"></div>
                         <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-0.5 h-2 bg-teal-500/50"></div>
@@ -303,32 +232,21 @@
         };
 
         const HackerText = ({ text, className }) => {
-            const [displayText, setDisplayText] = useState('');
-            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$%^&*()';
-            
+            const [disp, setDisp] = useState('');
             useEffect(() => {
-                let iteration = 0;
-                let interval = null;
-                interval = setInterval(() => {
-                    setDisplayText(prev => 
-                        text.split('').map((letter, index) => {
-                            if(index < iteration) return text[index];
-                            return chars[Math.floor(Math.random() * chars.length)]
-                        }).join('')
-                    );
-                    if(iteration >= text.length) clearInterval(interval);
-                    iteration += 1/3;
+                let iter = 0; const interval = setInterval(() => {
+                    setDisp(text.split('').map((l, i) => i < iter ? text[i] : "ABCDEF0123456789"[Math.floor(Math.random()*16)]).join(''));
+                    if(iter >= text.length) clearInterval(interval); iter += 1/3;
                 }, 30);
                 return () => clearInterval(interval);
             }, [text]);
+            return <span className={className}>{disp}</span>;
+        };
 
-            return <span className={className}>{displayText}</span>;
-        }
-
-        // --- Draggable Network Monitor ---
+        // --- Draggable Network Monitor (Passive) ---
         const NetworkMonitor = () => {
             const [logs, setLogs] = useState([]);
-            const [position, setPosition] = useState({ x: 20, y: 150 });
+            const [pos, setPos] = useState({ x: 20, y: 150 });
             const [isDragging, setIsDragging] = useState(false);
             const dragRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
 
@@ -350,54 +268,28 @@
 
             const handleMouseDown = (e) => {
                 setIsDragging(true);
-                dragRef.current = {
-                    startX: e.clientX,
-                    startY: e.clientY,
-                    initialX: position.x,
-                    initialY: position.y
-                };
+                dragRef.current = { startX: e.clientX, startY: e.clientY, initialX: pos.x, initialY: pos.y };
             };
 
             useEffect(() => {
                 const handleMouseMove = (e) => {
                     if (!isDragging) return;
-                    const dx = e.clientX - dragRef.current.startX;
-                    const dy = e.clientY - dragRef.current.startY;
-                    setPosition({
-                        x: dragRef.current.initialX + dx,
-                        y: dragRef.current.initialY + dy
-                    });
+                    setPos({ x: dragRef.current.initialX + (e.clientX - dragRef.current.startX), y: dragRef.current.initialY + (e.clientY - dragRef.current.startY) });
                 };
                 const handleMouseUp = () => setIsDragging(false);
-
-                if (isDragging) {
-                    window.addEventListener('mousemove', handleMouseMove);
-                    window.addEventListener('mouseup', handleMouseUp);
-                }
-                return () => {
-                    window.removeEventListener('mousemove', handleMouseMove);
-                    window.removeEventListener('mouseup', handleMouseUp);
-                };
+                if (isDragging) { window.addEventListener('mousemove', handleMouseMove); window.addEventListener('mouseup', handleMouseUp); }
+                return () => { window.removeEventListener('mousemove', handleMouseMove); window.removeEventListener('mouseup', handleMouseUp); };
             }, [isDragging]);
 
             return (
-                <div 
-                    className="hidden lg:block fixed w-56 font-mono text-[10px] text-teal-500/40 z-30 bg-slate-950/80 border border-teal-500/20 rounded backdrop-blur-sm shadow-2xl"
-                    style={{ left: position.x, top: position.y, cursor: isDragging ? 'none' : 'none' }}
-                >
-                    <div 
-                        onMouseDown={handleMouseDown}
-                        className="bg-teal-900/20 border-b border-teal-500/20 p-2 flex justify-between items-center cursor-move select-none hover:bg-teal-900/30 transition-colors"
-                    >
-                        <span className="uppercase tracking-widest text-teal-400 font-bold">NET_MON_V4</span>
-                        <Move size={12} className="text-teal-500/50" />
+                <div className="hidden lg:block fixed w-56 font-mono text-[10px] text-teal-500/40 z-30 bg-slate-950/80 border border-teal-500/20 rounded backdrop-blur-sm shadow-2xl" style={{ left: pos.x, top: pos.y }}>
+                    <div onMouseDown={handleMouseDown} className="bg-teal-900/20 border-b border-teal-500/20 p-2 flex justify-between items-center cursor-move select-none hover:bg-teal-900/30 transition-colors">
+                        <span className="uppercase tracking-widest text-teal-400 font-bold">NET_MON_V4</span><Move size={12} className="text-teal-500/50" />
                     </div>
                     <div className="p-2 flex flex-col gap-2 h-48 overflow-hidden mask-linear">
                         {logs.map(log => (
                             <div key={log.id} className="animate-fade-up border-b border-teal-500/5 pb-1 last:border-0">
-                                <span className="text-teal-500/80">[{log.action}]</span> <br/>
-                                {log.target} <br/>
-                                <span className="opacity-50">SRC: {log.ip}</span>
+                                <span className="text-teal-500/80">[{log.action}]</span> <br/>{log.target} <br/><span className="opacity-50">SRC: {log.ip}</span>
                             </div>
                         ))}
                     </div>
@@ -407,71 +299,62 @@
 
         const AtmosphereWidget = () => (
             <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 font-mono text-xs shadow-xl relative overflow-hidden group">
-                <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity text-teal-500">
-                    <Cloud size={60} />
-                </div>
-                <h4 className="text-slate-500 mb-4 uppercase tracking-widest border-b border-slate-800 pb-2 flex justify-between">
-                    Atmospheric Sensors
-                    <span className="text-teal-500">ACTIVE</span>
-                </h4>
+                <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-40 transition-opacity text-teal-500"><Cloud size={60} /></div>
+                <h4 className="text-slate-500 mb-4 uppercase tracking-widest border-b border-slate-800 pb-2 flex justify-between">Atmospheric Sensors<span className="text-teal-500">ACTIVE</span></h4>
                 <div className="space-y-4 relative z-10">
-                    <div className="flex justify-between items-center">
-                        <span className="text-slate-400 flex items-center gap-2"><Thermometer size={14} /> TEMP (EXT)</span>
-                        <span className="text-teal-400">84°F (Regulated)</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                        <span className="text-slate-400 flex items-center gap-2"><Cloud size={14} /> AIR QUALITY</span>
-                        <span className="text-teal-400">SCRUBBED (99.9%)</span>
-                    </div>
+                    <div className="flex justify-between items-center"><span className="text-slate-400 flex items-center gap-2"><Thermometer size={14} /> TEMP (EXT)</span><span className="text-teal-400">84°F (Regulated)</span></div>
+                    <div className="flex justify-between items-center"><span className="text-slate-400 flex items-center gap-2"><Cloud size={14} /> AIR QUALITY</span><span className="text-teal-400">SCRUBBED (99.9%)</span></div>
                     <div>
-                        <div className="flex justify-between items-center mb-1">
-                            <span className="text-slate-400">UV SHIELD</span>
-                            <span className="text-indigo-400">MAXIMUM</span>
-                        </div>
-                        <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
-                            <div className="w-full bg-indigo-500/50 h-full rounded-full animate-pulse"></div>
-                        </div>
+                        <div className="flex justify-between items-center mb-1"><span className="text-slate-400">UV SHIELD</span><span className="text-indigo-400">MAXIMUM</span></div>
+                        <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden"><div className="w-full bg-indigo-500/50 h-full rounded-full animate-pulse"></div></div>
                     </div>
                 </div>
             </div>
         );
 
+        const WorldIntel = () => (
+            <section className="animate-fade-up">
+                <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2"><Globe className="text-teal-500" /><HackerText text="Global Status: 2040" /></h3>
+                <div className="grid gap-6">
+                    <div className="bg-slate-900/80 border border-red-500/30 rounded-xl p-6 relative overflow-hidden group hover:border-red-500/50 transition-all" onMouseEnter={() => playSound('hover')}>
+                        <div className="absolute -right-4 -top-4 text-red-500/10"><AlertTriangle size={100} /></div>
+                        <h4 className="text-red-400 font-bold mb-2 flex items-center gap-2"><Lock size={16} /> THE DEAD INTERNET</h4>
+                        <p className="text-slate-400 text-sm leading-relaxed mb-4">The "Surface Web" collapsed in 2032. It is now a graveyard of bots talking to bots. Real human interaction has migrated to <strong>Verified Subnets</strong> like the Lattice.</p>
+                        <div className="flex gap-2"><span className="text-[10px] bg-red-500/10 text-red-400 px-2 py-1 rounded border border-red-500/20">99.9% SYNTHETIC TRAFFIC</span></div>
+                    </div>
+                    <div className="bg-slate-900/80 border border-teal-500/30 rounded-xl p-6 relative overflow-hidden hover:border-teal-500/50 transition-all" onMouseEnter={() => playSound('hover')}>
+                        <h4 className="text-teal-400 font-bold mb-2 flex items-center gap-2"><Briefcase size={16} /> LABOR SHIFT</h4>
+                        <p className="text-slate-400 text-sm leading-relaxed">The "Great Automaton" replaced all syntax-based coding. We don't write code; we cultivate it.</p>
+                        <ul className="mt-3 space-y-2 text-sm text-slate-500 font-mono">
+                            <li className="flex justify-between border-b border-slate-800 pb-1"><span>OLD: Software Engineer</span><span className="text-teal-500">NEW: Neural Architect</span></li>
+                            <li className="flex justify-between border-b border-slate-800 pb-1"><span>OLD: Teacher</span><span className="text-teal-500">NEW: Truth Navigator</span></li>
+                        </ul>
+                    </div>
+                    <div className="bg-slate-900/80 border border-indigo-500/30 rounded-xl p-6 relative overflow-hidden hover:border-indigo-500/50 transition-all" onMouseEnter={() => playSound('hover')}>
+                        <h4 className="text-indigo-400 font-bold mb-2 flex items-center gap-2"><Book size={16} /> EDUCATION PROTOCOLS</h4>
+                        <p className="text-slate-400 text-sm leading-relaxed">Schools no longer teach rote memorization. Instead, <strong>Academies of Verification</strong> teach "Truth Navigation" and Analog Arts.</p>
+                    </div>
+                </div>
+            </section>
+        );
+
         const BootSequence = ({ onComplete }) => {
             const [lines, setLines] = useState([]);
-            const bootText = [
-                "INITIALIZING NEURAL LINK...",
-                "LOADING BIOS V.40.1...",
-                "CONNECTING TO HUNTSVILLE LATTICE...",
-                "VERIFYING BIOMETRIC HASH...",
-                "DECRYPTING SECURE SECTORS...",
-                "ESTABLISHING SECURE HANDSHAKE...",
-                "ACCESS GRANTED."
-            ];
-
+            const bootText = ["INITIALIZING NEURAL LINK...", "LOADING BIOS V.40.1...", "CONNECTING TO HUNTSVILLE LATTICE...", "VERIFYING BIOMETRIC HASH...", "DECRYPTING SECURE SECTORS...", "ACCESS GRANTED."];
             useEffect(() => {
                 let delay = 0;
                 bootText.forEach((text, index) => {
                     delay += Math.random() * 400 + 200;
                     setTimeout(() => {
+                        playSound('click');
                         setLines(prev => [...prev, text]);
-                        if (index === bootText.length - 1) {
-                            setTimeout(onComplete, 800);
-                        }
+                        if (index === bootText.length - 1) setTimeout(onComplete, 800);
                     }, delay);
                 });
             }, []);
-
             return (
-                <div className="fixed inset-0 bg-black z-[100] flex flex-col justify-end p-12 font-mono text-teal-500 text-sm md:text-base leading-relaxed">
-                    <div className="max-w-2xl">
-                        {lines.map((line, i) => (
-                            <div key={i} className="mb-1">
-                                <span className="opacity-50 mr-2">{`>`}</span>
-                                {line}
-                            </div>
-                        ))}
-                        <div className="blink-cursor mt-2 text-teal-500">_</div>
-                    </div>
+                <div className="fixed inset-0 bg-black z-[100] flex flex-col justify-end p-12 font-mono text-teal-500 text-sm md:text-base">
+                    <div className="max-w-2xl">{lines.map((l, i) => <div key={i} className="mb-1"><span className="opacity-50 mr-2">{`>`}</span>{l}</div>)}<div className="blink-cursor mt-2 text-teal-500">_</div></div>
                 </div>
             );
         };
@@ -479,49 +362,26 @@
         const JournalEntry = ({ date, title, content, icon: Icon }) => {
             const [isDecrypted, setIsDecrypted] = useState(false);
             const [displayContent, setDisplayContent] = useState("");
-
             const handleDecrypt = () => {
                 if (isDecrypted) return;
-                let iteration = 0;
-                const chars = '01';
-                const interval = setInterval(() => {
-                    setDisplayContent(
-                        content.split('').map((letter, index) => {
-                            if(index < iteration) return content[index];
-                            return chars[Math.floor(Math.random() * chars.length)];
-                        }).join('')
-                    );
-                    if (iteration >= content.length) {
-                        clearInterval(interval);
-                        setIsDecrypted(true);
-                    }
-                    iteration += 2;
+                playSound('decrypt');
+                let iter = 0; const interval = setInterval(() => {
+                    setDisplayContent(content.split('').map((l, i) => i < iter ? content[i] : "01"[Math.floor(Math.random()*2)]).join(''));
+                    if (iter >= content.length) { clearInterval(interval); setIsDecrypted(true); }
+                    iter += 2;
                 }, 5);
             };
-
             return (
-                <div 
-                    onClick={handleDecrypt}
-                    className={`relative pl-8 border-l border-slate-700 pb-12 last:pb-0 transition-all duration-300 ${!isDecrypted ? 'cursor-pointer hover:bg-slate-900/30 group' : ''}`}
-                >
+                <div onClick={handleDecrypt} onMouseEnter={() => playSound('hover')} className={`relative pl-8 border-l border-slate-700 pb-12 last:pb-0 transition-all duration-300 ${!isDecrypted ? 'cursor-pointer hover:bg-slate-900/30 group' : ''}`}>
                     <div className={`absolute -left-3 top-0 border p-1 rounded-full transition-colors duration-500 ${isDecrypted ? 'bg-slate-900 border-teal-500/50 text-teal-500' : 'bg-red-900/20 border-red-500/50 text-red-500 group-hover:bg-red-900/40'}`}>
                         {isDecrypted ? <Icon size={16} /> : <Lock size={16} />}
                     </div>
-                    
                     <div className="mb-2 flex flex-col sm:flex-row sm:items-center gap-2">
                         <span className="text-teal-400 font-mono text-xs px-2 py-0.5 bg-teal-500/10 rounded border border-teal-500/20">{date}</span>
-                        <h4 className="text-lg font-bold text-slate-100 flex items-center gap-2">
-                            {title}
-                            {!isDecrypted && <span className="text-xs text-red-400 animate-pulse border border-red-500/30 px-2 py-0.5 rounded uppercase">[Encrypted]</span>}
-                        </h4>
+                        <h4 className="text-lg font-bold text-slate-100 flex items-center gap-2">{title} {!isDecrypted && <span className="text-xs text-red-400 animate-pulse border border-red-500/30 px-2 py-0.5 rounded uppercase">[Encrypted]</span>}</h4>
                     </div>
-                    
                     <div className={`p-4 rounded-lg border text-sm leading-relaxed font-mono transition-all duration-500 ${isDecrypted ? 'bg-slate-900/50 border-slate-800 text-slate-400' : 'bg-red-950/10 border-red-900/30 text-red-400/50'}`}>
-                        {isDecrypted ? displayContent : (
-                            <div className="flex items-center gap-2">
-                                <span className="truncate">0101010101 [CLICK TO DECRYPT NEURAL LOG] 0101010101</span>
-                            </div>
-                        )}
+                        {isDecrypted ? displayContent : <div className="flex items-center gap-2"><span className="truncate">0101010101 [CLICK TO DECRYPT NEURAL LOG] 0101010101</span></div>}
                     </div>
                 </div>
             );
@@ -532,21 +392,14 @@
                 <div className="mt-12 p-8 border border-slate-800 border-dashed rounded-xl bg-slate-900/30 flex flex-col items-center justify-center text-center">
                     <Lock className="text-slate-600 mb-4" size={40} />
                     <h3 className="text-slate-500 font-mono text-lg mb-2">RESTRICTED BLUEPRINTS</h3>
-                    <p className="text-slate-600 text-sm max-w-md">
-                        Schematic files for "Aero-Autonomous Transport" and "Retinal Ledger" are encrypted. 
-                        <br/> <span className="text-red-900/50">REQUIRES HUMAN VERIFICATION.</span>
-                    </p>
+                    <p className="text-slate-600 text-sm max-w-md">Schematic files encrypted. <br/> <span className="text-red-900/50">REQUIRES HUMAN VERIFICATION.</span></p>
                 </div>
             );
-
             return (
                 <section className="mt-12 animate-fade-up">
-                     <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                        <FileText className="text-teal-500" />
-                        <HackerText text="Declassified Schematics" />
-                    </h3>
+                     <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2"><FileText className="text-teal-500" /><HackerText text="Declassified Schematics" /></h3>
                     <div className="grid md:grid-cols-2 gap-6">
-                        <div className="bg-slate-900/80 border border-teal-500/30 rounded-xl p-6 relative overflow-hidden group hover:border-teal-500/60 transition-colors">
+                        <div className="bg-slate-900/80 border border-teal-500/30 rounded-xl p-6 relative overflow-hidden group hover:border-teal-500/60 transition-colors" onMouseEnter={() => playSound('hover')}>
                             <div className="absolute top-0 right-0 bg-teal-500/20 px-2 py-1 text-[10px] font-mono text-teal-400 rounded-bl">PROTOTYPE MK-IV</div>
                             <div className="h-32 mb-4 border border-teal-500/10 rounded bg-slate-950/50 flex items-center justify-center relative">
                                 <svg width="120" height="60" viewBox="0 0 120 60" fill="none" stroke="#14b8a6" strokeWidth="1" className="opacity-80">
@@ -555,16 +408,11 @@
                                     <line x1="20" y1="45" x2="100" y2="45" strokeOpacity="0.5" />
                                     <circle cx="60" cy="30" r="15" strokeOpacity="0.3" />
                                 </svg>
-                                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMSIgY3k9IjEiIHI9IjEiIGZpbGw9InJnYmEoMjAsIDE4NCwgMTY2LCAwLjEpIi8+PC9zdmc+')] opacity-50"></div>
                             </div>
                             <h4 className="text-teal-400 font-bold mb-1">Aero-Autonomous Unit</h4>
-                            <p className="text-xs text-slate-400 font-mono">
-                                Anti-gravity propulsion matrix tailored for urban density. Zero-emission. 
-                                <br/><span className="text-teal-500/70">STATUS: DEPLOYED GLOBALLY</span>
-                            </p>
+                            <p className="text-xs text-slate-400 font-mono">Anti-gravity propulsion matrix tailored for urban density. Zero-emission. <br/><span className="text-teal-500/70">STATUS: DEPLOYED GLOBALLY</span></p>
                         </div>
-
-                         <div className="bg-slate-900/80 border border-indigo-500/30 rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/60 transition-colors">
+                         <div className="bg-slate-900/80 border border-indigo-500/30 rounded-xl p-6 relative overflow-hidden group hover:border-indigo-500/60 transition-colors" onMouseEnter={() => playSound('hover')}>
                             <div className="absolute top-0 right-0 bg-indigo-500/20 px-2 py-1 text-[10px] font-mono text-indigo-400 rounded-bl">BIO-KEY v9.0</div>
                             <div className="h-32 mb-4 border border-indigo-500/10 rounded bg-slate-950/50 flex items-center justify-center relative">
                                 <svg width="80" height="80" viewBox="0 0 100 100" fill="none" stroke="#6366f1" strokeWidth="1" className="opacity-80">
@@ -575,10 +423,7 @@
                                 </svg>
                             </div>
                             <h4 className="text-indigo-400 font-bold mb-1">Retinal Ledger</h4>
-                            <p className="text-xs text-slate-400 font-mono">
-                                Sub-dermal scan technology verifying organic tissue vs synthetic constructs.
-                                <br/><span className="text-indigo-500/70">STATUS: MANDATORY</span>
-                            </p>
+                            <p className="text-xs text-slate-400 font-mono">Sub-dermal scan technology verifying organic tissue vs synthetic constructs. <br/><span className="text-indigo-500/70">STATUS: MANDATORY</span></p>
                         </div>
                     </div>
                 </section>
@@ -587,44 +432,24 @@
 
         const SecureVideoFeed = () => {
             const [connected, setConnected] = useState(false);
-
             return (
                 <div className="border border-teal-500/30 bg-slate-900/50 rounded-xl p-1 relative overflow-hidden mb-12 animate-fade-up">
-                    <div className="absolute top-0 left-0 bg-teal-500/20 px-2 py-1 text-[10px] font-mono text-teal-400 rounded-br z-20">
-                        INCOMING TRANSMISSION
-                    </div>
-                    
+                    <div className="absolute top-0 left-0 bg-teal-500/20 px-2 py-1 text-[10px] font-mono text-teal-400 rounded-br z-20">INCOMING TRANSMISSION</div>
                     {!connected ? (
                         <div className="aspect-video bg-black/80 flex flex-col items-center justify-center gap-4 relative overflow-hidden">
-                             {/* Static noise effect */}
                             <div className="absolute inset-0 opacity-10 noise-overlay"></div>
-                            
                             <div className="z-10 text-center relative">
                                 <Video size={48} className="text-teal-500 mx-auto mb-2 animate-pulse" />
                                 <h3 className="text-teal-400 font-mono tracking-widest text-sm">SECURE VIDEO LINK</h3>
                                 <p className="text-slate-500 text-xs font-mono mb-4">SOURCE: LACHLAN_KENNEDY_AI_AVATAR</p>
-                                
-                                <button 
-                                    onClick={() => setConnected(true)}
-                                    className="px-6 py-2 bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/50 text-teal-400 font-mono text-xs rounded transition-all flex items-center gap-2 group cursor-none mx-auto"
-                                >
-                                    <span className="w-2 h-2 bg-teal-500 rounded-full group-hover:animate-ping"></span>
-                                    ESTABLISH CONNECTION
+                                <button onClick={() => { setConnected(true); playSound('click'); }} onMouseEnter={() => playSound('hover')} className="px-6 py-2 bg-teal-500/20 hover:bg-teal-500/30 border border-teal-500/50 text-teal-400 font-mono text-xs rounded transition-all flex items-center gap-2 group cursor-none mx-auto">
+                                    <span className="w-2 h-2 bg-teal-500 rounded-full group-hover:animate-ping"></span> ESTABLISH CONNECTION
                                 </button>
                             </div>
                         </div>
                     ) : (
                         <div className="aspect-video bg-black relative">
-                            {/* --- VIDEO EMBED LINK PRESERVED --- */}
-                            <iframe 
-                                className="w-full h-full"
-                                src="https://app.heygen.com/embedded-player/65a8c67b4fb54237ae61fd4648f0ee8a" 
-                                title="HeyGen video player" 
-                                frameBorder="0" 
-                                allow="encrypted-media; fullscreen;" 
-                                allowFullScreen
-                            ></iframe>
-                            
+                            <iframe className="w-full h-full" src="https://app.heygen.com/embedded-player/65a8c67b4fb54237ae61fd4648f0ee8a" title="HeyGen video player" frameBorder="0" allow="encrypted-media; fullscreen;" allowFullScreen></iframe>
                             <div className="absolute inset-0 pointer-events-none shadow-[inset_0_0_50px_rgba(0,0,0,0.8)] border border-teal-500/20"></div>
                         </div>
                     )}
@@ -633,59 +458,41 @@
         };
 
         const Typer = ({ text, delay = 0 }) => {
-            const [displayedText, setDisplayedText] = useState("");
+            const [disp, setDisp] = useState("");
             const [started, setStarted] = useState(false);
-
-            useEffect(() => {
-                const timer = setTimeout(() => setStarted(true), delay);
-                return () => clearTimeout(timer);
-            }, [delay]);
-
+            useEffect(() => { const t = setTimeout(() => setStarted(true), delay); return () => clearTimeout(t); }, [delay]);
             useEffect(() => {
                 if (!started) return;
                 let i = 0;
-                const interval = setInterval(() => {
-                    setDisplayedText(text.substring(0, i + 1));
-                    i++;
-                    if (i === text.length) clearInterval(interval);
-                }, 20); // Typing speed
-                return () => clearInterval(interval);
+                const int = setInterval(() => { setDisp(text.substring(0, i + 1)); i++; if (i === text.length) clearInterval(int); }, 20);
+                return () => clearInterval(int);
             }, [text, started]);
-
-            return <span>{displayedText}</span>;
+            return <span>{disp}</span>;
         };
 
         const App = () => {
             const [booted, setBooted] = useState(false);
             const [verified, setVerified] = useState(false);
-            const [scanning, setScanning] = useState(false);
-            const [showScanModal, setShowScanModal] = useState(false);
+            const [scanModal, setScanModal] = useState(false);
             const [scanProgress, setScanProgress] = useState(0);
+            const [uptime, setUptime] = useState(0);
+
+            useEffect(() => { const i = setInterval(() => setUptime(p => p+1), 1000); return () => clearInterval(i); }, []);
 
             const handleVerify = () => {
                 if (verified) return;
-                setShowScanModal(true);
-                setScanning(true);
+                playSound('click');
+                setScanModal(true);
                 setScanProgress(0);
-                const interval = setInterval(() => {
-                    setScanProgress((prev) => {
-                        if (prev >= 100) {
-                            clearInterval(interval);
-                            setScanning(false);
-                            setTimeout(() => {
-                                setShowScanModal(false);
-                                setVerified(true);
-                            }, 800);
-                            return 100;
-                        }
-                        return prev + 2;
+                const i = setInterval(() => {
+                    setScanProgress(p => {
+                        if (p >= 100) { clearInterval(i); setTimeout(() => { setScanModal(false); setVerified(true); playSound('click'); }, 800); return 100; }
+                        return p + 2;
                     });
                 }, 30);
             };
 
-            if (!booted) {
-                return <BootSequence onComplete={() => setBooted(true)} />;
-            }
+            if (!booted) return <BootSequence onComplete={() => setBooted(true)} />;
 
             return (
                 <div className="min-h-screen text-slate-300 font-sans overflow-x-hidden relative">
@@ -693,14 +500,15 @@
                     <ParticleBackground />
                     <NetworkMonitor />
                     
-                    {/* Navigation */}
                     <nav className="fixed w-full z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800">
                         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-                            <div className="text-xl font-bold tracking-tighter text-teal-500 flex items-center gap-2 glitch-hover cursor-none">
-                                <Cpu size={20} />
-                                <HackerText text="LK_NODE_2040" />
+                            <div className="text-xl font-bold tracking-tighter text-teal-500 flex items-center gap-2 glitch-hover cursor-none" onMouseEnter={() => playSound('hover')}>
+                                <Cpu size={20} /> <HackerText text="LK_NODE_2040" />
                             </div>
                             <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2 text-[10px] text-teal-500/50 font-mono border border-teal-500/20 px-2 py-1 rounded">
+                                    <Volume2 size={12} /> AUDIO_ENABLED
+                                </div>
                                 <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-xs font-mono border transition-all duration-500 ${verified ? 'border-green-500 text-green-400 bg-green-500/10 shadow-[0_0_15px_rgba(34,197,94,0.3)]' : 'border-red-500 text-red-400 bg-red-500/10 animate-pulse'}`}>
                                     {verified ? <ShieldCheck size={14} /> : <Eye size={14} />}
                                     {verified ? "HUMAN VERIFIED" : "UNVERIFIED ENTITY"}
@@ -710,256 +518,104 @@
                     </nav>
 
                     <main className="pt-24 pb-20 px-6 max-w-5xl mx-auto relative z-10">
-                        
-                        {/* Dead Internet Warning Banner */}
                         <div className="mb-12 border border-amber-500/30 bg-amber-900/10 rounded-lg p-4 flex items-start gap-3 animate-fade-up">
                             <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
                             <div>
                                 <h3 className="text-amber-400 font-bold text-sm uppercase tracking-wider mb-1">Dead Internet Protocol Active</h3>
-                                <p className="text-xs text-amber-200/70">
-                                    Warning: 99.7% of global traffic is synthetic. You are accessing a verified Human Node. 
-                                    Do not trust unverified endpoints. The "perfect" answer is likely a hallucination.
-                                </p>
+                                <p className="text-xs text-amber-200/70">Warning: 99.7% of global traffic is synthetic. You are accessing a verified Human Node.</p>
                             </div>
                         </div>
 
-                        {/* Hero Section */}
                         <div className="flex flex-col md:flex-row gap-12 items-center mb-24 animate-fade-up delay-100">
-                            <div className="w-full md:w-1/2 relative group">
+                            <div className="w-full md:w-1/2 relative group holo-container cursor-none" onMouseEnter={() => playSound('hover')}>
                                 <div className="absolute -inset-1 bg-gradient-to-r from-teal-900 to-indigo-900 rounded-2xl blur opacity-40 group-hover:opacity-75 transition duration-1000"></div>
                                 <div className="relative aspect-[3/4] w-full max-w-md mx-auto overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl">
-                                    <img 
-                                        src="Screenshot 2026-01-30 112609.jpg" 
-                                        alt="Lachlan Kennedy" 
-                                        className={`w-full h-full object-cover transition-all duration-700 ${verified ? 'grayscale-0' : 'grayscale contrast-125 sepia-[.3]'}`}
-                                        onError={(e) => {
-                                            e.target.onerror = null; 
-                                            e.target.src = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop";
-                                        }}
-                                    />
+                                    <img src="Screenshot 2026-01-30 112609.jpg" alt="Lachlan Kennedy" className={`w-full h-full object-cover holo-img transition-all duration-700 ${verified ? 'grayscale-0' : 'grayscale contrast-125 sepia-[.3]'}`} onError={(e) => { e.target.onerror = null; e.target.src = "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?q=80&w=1000&auto=format&fit=crop"; }} />
                                     {!verified && <div className="scan-line"></div>}
                                     <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end">
-                                        <div className="bg-slate-950/90 backdrop-blur px-3 py-1 rounded border border-slate-700 text-xs font-mono text-teal-500 shadow-lg">
-                                            ID: LK-HUMAN-ORIGIN
-                                        </div>
+                                        <div className="bg-slate-950/90 backdrop-blur px-3 py-1 rounded border border-slate-700 text-xs font-mono text-teal-500 shadow-lg">ID: LK-HUMAN-ORIGIN</div>
                                     </div>
                                 </div>
                             </div>
 
                             <div className="w-full md:w-1/2 space-y-6 animate-fade-up delay-200">
                                 <div>
-                                    <h2 className="text-teal-600 font-mono text-sm tracking-widest mb-2 flex items-center gap-2">
-                                        <span className="w-2 h-2 bg-teal-600 rounded-full inline-block animate-pulse"></span>
-                                        <HackerText text="NEURAL ARCHITECT // 2040" />
-                                    </h2>
-                                    <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight mb-2">
-                                        <HackerText text="Lachlan" /> <br/> <HackerText text="Kennedy" />
-                                    </h1>
-                                    <p className="text-xl text-slate-400">
-                                        I shape the intent of the Lattice, pruning the synthetic growth to keep the internet human.
-                                    </p>
+                                    <h2 className="text-teal-600 font-mono text-sm tracking-widest mb-2 flex items-center gap-2"><span className="w-2 h-2 bg-teal-600 rounded-full inline-block animate-pulse"></span> <HackerText text="NEURAL ARCHITECT // 2040" /></h2>
+                                    <h1 className="text-5xl md:text-6xl font-bold text-white tracking-tight mb-2"><HackerText text="Lachlan" /> <br/> <HackerText text="Kennedy" /></h1>
+                                    <p className="text-xl text-slate-400">I shape the intent of the Lattice, pruning the synthetic growth to keep the internet human.</p>
                                 </div>
-
                                 <div className="grid grid-cols-2 gap-4 py-6 border-t border-slate-800">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-slate-900 rounded-lg text-teal-500 border border-slate-800"><User size={20} /></div>
-                                        <div>
-                                            <p className="text-xs text-slate-500 font-mono">AGE (BIO)</p>
-                                            <p className="font-semibold text-slate-200">32 Years</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-slate-900 rounded-lg text-teal-500 border border-slate-800"><MapPin size={20} /></div>
-                                        <div>
-                                            <p className="text-xs text-slate-500 font-mono">SECTOR</p>
-                                            <p className="font-semibold text-slate-200">Huntsville Lattice</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 col-span-2">
-                                        <div className="p-2 bg-slate-900 rounded-lg text-teal-500 border border-slate-800"><Briefcase size={20} /></div>
-                                        <div>
-                                            <p className="text-xs text-slate-500 font-mono">ROLE</p>
-                                            <p className="font-semibold text-slate-200">Neural Architect / Ethicist</p>
-                                        </div>
-                                    </div>
+                                    <div className="flex items-center gap-3"><div className="p-2 bg-slate-900 rounded-lg text-teal-500 border border-slate-800"><User size={20} /></div><div><p className="text-xs text-slate-500 font-mono">AGE (BIO)</p><p className="font-semibold text-slate-200">32 Years</p></div></div>
+                                    <div className="flex items-center gap-3"><div className="p-2 bg-slate-900 rounded-lg text-teal-500 border border-slate-800"><MapPin size={20} /></div><div><p className="text-xs text-slate-500 font-mono">SECTOR</p><p className="font-semibold text-slate-200">Huntsville Lattice</p></div></div>
+                                    <div className="flex items-center gap-3 col-span-2"><div className="p-2 bg-slate-900 rounded-lg text-teal-500 border border-slate-800"><Briefcase size={20} /></div><div><p className="text-xs text-slate-500 font-mono">ROLE</p><p className="font-semibold text-slate-200">Neural Architect / Ethicist</p></div></div>
                                 </div>
-
                                 {!verified ? (
-                                    <button 
-                                        onClick={handleVerify}
-                                        className="w-full py-4 bg-teal-700/80 hover:bg-teal-600 text-white rounded-lg font-bold tracking-wide transition-all shadow-lg shadow-teal-900/20 flex items-center justify-center gap-2 group relative overflow-hidden border border-teal-500/50 cursor-none"
-                                    >
-                                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
-                                        <Eye size={20} />
-                                        VERIFY HUMANITY
+                                    <button onClick={handleVerify} onMouseEnter={() => playSound('hover')} className="w-full py-4 bg-teal-700/80 hover:bg-teal-600 text-white rounded-lg font-bold tracking-wide transition-all shadow-lg shadow-teal-900/20 flex items-center justify-center gap-2 group relative overflow-hidden border border-teal-500/50 cursor-none">
+                                        <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div><Eye size={20} /> VERIFY HUMANITY
                                     </button>
                                 ) : (
-                                    <div className="w-full py-4 bg-green-500/5 border border-green-500/20 text-green-400 rounded-lg font-bold tracking-wide flex items-center justify-center gap-2">
-                                        <ShieldCheck size={20} />
-                                        BIOMETRIC HANDSHAKE COMPLETE
-                                    </div>
+                                    <div className="w-full py-4 bg-green-500/5 border border-green-500/20 text-green-400 rounded-lg font-bold tracking-wide flex items-center justify-center gap-2"><ShieldCheck size={20} /> BIOMETRIC HANDSHAKE COMPLETE</div>
                                 )}
                             </div>
                         </div>
 
                         <div className="grid md:grid-cols-12 gap-8">
-                            
-                            {/* Main Column - Logs & Philosophy */}
                             <div className="md:col-span-7 space-y-12 animate-fade-up delay-300">
-                                
-                                {/* --- SECURE VIDEO FEED SECTION --- */}
                                 <SecureVideoFeed />
-                                
-                                {/* Dead Internet Philosophy */}
                                 <section>
-                                    <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                                        <Globe className="text-indigo-500" />
-                                        Dead Internet Theory: Confirmed
-                                    </h3>
+                                    <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2"><Globe className="text-indigo-500" /> Dead Internet Theory: Confirmed</h3>
                                     <div className="bg-slate-900/80 rounded-2xl p-8 border border-slate-800 backdrop-blur-sm relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-4 opacity-5 text-indigo-500">
-                                            <Lock size={120} />
-                                        </div>
-                                        <p className="text-lg leading-relaxed text-slate-300 mb-6 relative z-10">
-                                            <Typer text='"The internet isn&apos;t a library anymore. It&apos;s a hall of mirrors."' delay={200} />
-                                        </p>
-                                        <p className="text-slate-400 leading-relaxed relative z-10 text-sm">
-                                            <Typer text="My job as a Neural Architect is to act as a bridge between 'Raw Compute' and reality. We don't have 'coders' anymore; self-optimizing compilers swallowed those jobs. Instead, we prune the recursive growth of synthetic intelligence. Without the Eye Scan and Biometric Handshakes, you can never be 100% sure you aren't talking to a sophisticated scam-bot." delay={2000} />
-                                        </p>
+                                        <div className="absolute top-0 right-0 p-4 opacity-5 text-indigo-500"><Lock size={120} /></div>
+                                        <p className="text-lg leading-relaxed text-slate-300 mb-6 relative z-10"><Typer text='"The internet isn&apos;t a library anymore. It&apos;s a hall of mirrors."' delay={200} /></p>
+                                        <p className="text-slate-400 leading-relaxed relative z-10 text-sm"><Typer text="My job as a Neural Architect is to act as a bridge between 'Raw Compute' and reality. We don't have 'coders' anymore... self-optimizing compilers swallowed those jobs. Instead, we prune the recursive growth of synthetic intelligence." delay={2000} /></p>
                                     </div>
                                 </section>
-
-                                {/* Unlockable Blueprints Section (New!) */}
+                                <WorldIntel />
                                 <Blueprints active={verified} />
-
-                                {/* Journal Entries */}
                                 <section>
-                                    <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
-                                        <Terminal className="text-teal-500" />
-                                        Encrypted Neural Logs (2040)
-                                    </h3>
-                                    
+                                    <h3 className="text-2xl font-bold text-white mb-6 flex items-center gap-2"><Terminal className="text-teal-500" /> Encrypted Neural Logs (2040)</h3>
                                     <div className="space-y-4">
-                                        <JournalEntry 
-                                            date="March 12, 2040"
-                                            title='The "Ghost in the Code" Shift'
-                                            icon={Cpu}
-                                            content="I spent most of my shift today inside the Lattice, which is a far cry from the monitors and keyboards I used when I started as a junior dev. As a Neural Architect, I don’t write syntax anymore—I shape intent. My job is to act as a bridge between the 'Raw Compute' and the ethical guardrails of our city’s infrastructure. AI doesn’t just assist; it is the foundation. We don’t have 'coders' in the 2020s sense. Those roles were swallowed by self-optimizing compilers years ago. Instead, we have 'Prompt Ethicists' and 'Data Foresters' who prune the recursive growth of synthetic intelligence to keep it from hallucinating. Today was grueling because I had to decommission an older 'Legacy Logic' unit. It felt like an archaeological dig. It’s strange to think that people used to spend forty hours a week doing data entry or basic accounting. Those jobs are ghosts now. Now, we work twenty-hour weeks because the efficiency gains are so massive. My role is to ensure the AI remains a tool and doesn't become a black box we can no longer decode. It’s creative, high-stakes, and honestly, a bit exhausting to manage a mind that thinks a million times faster than your own."
-                                        />
-                                        
-                                        <JournalEntry 
-                                            date="April 5, 2040"
-                                            title="The Haptic Hug"
-                                            icon={Users}
-                                            content="I finally 'sat down' for dinner with my sister, Clara, who lives in Neo-Tokyo. Even though we are thousands of miles apart, the Kinetic-Link system makes it feel like she’s in the chair across from me. We both wore our haptic sleeves, so when she reached out to squeeze my hand after I told her about my rough week, I actually felt the pressure on my skin. It’s these small, tactile moments that keep us grounded. The biggest hurdle these days isn't the distance; it’s the Trust-Gap. With deep-fake technology being perfect for a decade now, we don't use standard video calls anymore. We rely on Biometric Handshakes. Before our avatars even appeared, our personal AI agents verified our unique 'heartbeat signatures' on the blockchain. It sounds cold and clinical, but it’s actually the only way we feel safe enough to be vulnerable. Without that digital certificate of authenticity, you can never be 100% sure you aren't talking to a sophisticated scam-bot. It makes real human connection feel like a precious, guarded treasure. We spent two hours just talking—no tech talk, no filters—just two siblings anchored by a verified signal."
-                                        />
-                                        
-                                        <JournalEntry 
-                                            date="May 21, 2040"
-                                            title="The Sub-Quantum Leap"
-                                            icon={ShieldCheck}
-                                            content="I was sitting in a park—one of the few 'No-Signal Zones' left—when my Neural-Bud pulsed with a priority-one news alert. I didn't see a screen; the headline was projected directly onto my retinas via my contact lenses: 'First Successful Sub-Quantum Data Transfer Achieved in Mars Colony.' It’s the 'holy grail' of physics—instantaneous communication across the solar system, bypassing the speed of light. I immediately checked the source. In 2040, you don't trust headlines; you trust Verification Clusters. My lens displayed three green rings: one from the Global Science Collective, one from the Independent Fact-Oracles, and a third from my own personal trust-filter. Because all three aligned, I knew it wasn't a synthetic hoax or a market-manipulation tactic. It’s breathtaking to think that the lag-time for Martian colonists is effectively dead. But as a Neural Architect, I immediately thought of the security risks. If we can move data instantly, how do we stop a sub-quantum virus before it even starts? The world just got smaller, but the stakes just got infinitely higher. I watched the holographic trees in the park sway, wondering if the wind was real or a weather-mod, and felt a chill."
-                                        />
-                                        
-                                        <JournalEntry 
-                                            date="June 14, 2040"
-                                            title="The Analog Resistance"
-                                            icon={MapPin}
-                                            content="Today, I did something radical: I went entirely Off-Grid. No lenses, no haptics, no neural-buds. I took an old-fashioned paper notebook—actual wood pulp—and a graphite pencil to the coast. There’s a growing movement called the 'Analog Resistance.' It’s not that we hate technology; we just miss the 'friction' of the real world. In my job, everything is frictionless. Everything is optimized. If I want a coffee, it’s printed and delivered by a drone before I even realize I’m thirsty, based on my bio-readouts. Sitting on those rocks, I realized how much I miss the beauty of a mistake. In the Lattice, if I make an error, the system autocorrects it instantly. But on this paper, if I smudge the lead, the smudge stays. It’s a permanent record of a human moment. I spent the afternoon sketching the waves, and for the first time in months, I didn't feel like a component in a larger machine. I felt like an observer. We’ve built a world where we can simulate anything, but we haven't yet figured out how to simulate the feeling of salt spray on your face or the smell of old paper. I think I’ll keep the notebook. It’s the only thing I own that doesn't have an IP address."
-                                        />
+                                        <JournalEntry date="March 12, 2040" title='The "Ghost in the Code" Shift' icon={Cpu} content="I spent most of my shift today inside the Lattice, which is a far cry from the monitors and keyboards I used when I started as a junior dev. As a Neural Architect, I don’t write syntax anymore—I shape intent. My job is to act as a bridge between the 'Raw Compute' and the ethical guardrails of our city’s infrastructure. AI doesn’t just assist; it is the foundation. We don’t have 'coders' in the 2020s sense. Those roles were swallowed by self-optimizing compilers years ago. Instead, we have 'Prompt Ethicists' and 'Data Foresters' who prune the recursive growth of synthetic intelligence to keep it from hallucinating. Today was grueling because I had to decommission an older 'Legacy Logic' unit. It felt like an archaeological dig. It’s strange to think that people used to spend forty hours a week doing data entry or basic accounting. Those jobs are ghosts now. Now, we work twenty-hour weeks because the efficiency gains are so massive. My role is to ensure the AI remains a tool and doesn't become a black box we can no longer decode. It’s creative, high-stakes, and honestly, a bit exhausting to manage a mind that thinks a million times faster than your own." />
+                                        <JournalEntry date="April 5, 2040" title="The Haptic Hug" icon={Users} content="I finally 'sat down' for dinner with my sister, Clara, who lives in Neo-Tokyo. Even though we are thousands of miles apart, the Kinetic-Link system makes it feel like she’s in the chair across from me. We both wore our haptic sleeves, so when she reached out to squeeze my hand after I told her about my rough week, I actually felt the pressure on my skin. It’s these small, tactile moments that keep us grounded. The biggest hurdle these days isn't the distance; it’s the Trust-Gap. With deep-fake technology being perfect for a decade now, we don't use standard video calls anymore. We rely on Biometric Handshakes. Before our avatars even appeared, our personal AI agents verified our unique 'heartbeat signatures' on the blockchain. It sounds cold and clinical, but it’s actually the only way we feel safe enough to be vulnerable. Without that digital certificate of authenticity, you can never be 100% sure you aren't talking to a sophisticated scam-bot. It makes real human connection feel like a precious, guarded treasure. We spent two hours just talking—no tech talk, no filters—just two siblings anchored by a verified signal." />
+                                        <JournalEntry date="May 21, 2040" title="The Sub-Quantum Leap" icon={ShieldCheck} content="I was sitting in a park—one of the few 'No-Signal Zones' left—when my Neural-Bud pulsed with a priority-one news alert. I didn't see a screen; the headline was projected directly onto my retinas via my contact lenses: 'First Successful Sub-Quantum Data Transfer Achieved in Mars Colony.' It’s the 'holy grail' of physics—instantaneous communication across the solar system, bypassing the speed of light. I immediately checked the source. In 2040, you don't trust headlines; you trust Verification Clusters. My lens displayed three green rings: one from the Global Science Collective, one from the Independent Fact-Oracles, and a third from my own personal trust-filter. Because all three aligned, I knew it wasn't a synthetic hoax or a market-manipulation tactic. It’s breathtaking to think that the lag-time for Martian colonists is effectively dead. But as a Neural Architect, I immediately thought of the security risks. If we can move data instantly, how do we stop a sub-quantum virus before it even starts? The world just got smaller, but the stakes just got infinitely higher. I watched the holographic trees in the park sway, wondering if the wind was real or a weather-mod, and felt a chill." />
+                                        <JournalEntry date="June 14, 2040" title="The Analog Resistance" icon={MapPin} content="Today, I did something radical: I went entirely Off-Grid. No lenses, no haptics, no neural-buds. I took an old-fashioned paper notebook—actual wood pulp—and a graphite pencil to the coast. There’s a growing movement called the 'Analog Resistance.' It’s not that we hate technology; we just miss the 'friction' of the real world. In my job, everything is frictionless. Everything is optimized. If I want a coffee, it’s printed and delivered by a drone before I even realize I’m thirsty, based on my bio-readouts. Sitting on those rocks, I realized how much I miss the beauty of a mistake. In the Lattice, if I make an error, the system autocorrects it instantly. But on this paper, if I smudge the lead, the smudge stays. It’s a permanent record of a human moment. I spent the afternoon sketching the waves, and for the first time in months, I didn't feel like a component in a larger machine. I felt like an observer. We’ve built a world where we can simulate anything, but we haven't yet figured out how to simulate the feeling of salt spray on your face or the smell of old paper. I think I’ll keep the notebook. It’s the only thing I own that doesn't have an IP address." />
                                     </div>
                                 </section>
                             </div>
-
-                            {/* Sidebar */}
                             <div className="md:col-span-5 space-y-8 animate-fade-up delay-400">
-                                
-                                {/* Family Card */}
-                                <div className="bg-gradient-to-br from-amber-950/40 to-slate-900 rounded-2xl p-8 border border-amber-900/20 relative overflow-hidden">
+                                <div className="bg-gradient-to-br from-amber-950/40 to-slate-900 rounded-2xl p-8 border border-amber-900/20 relative overflow-hidden" onMouseEnter={() => playSound('hover')}>
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-amber-600/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
-                                    <div className="relative z-10">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg">
-                                                <Users size={24} />
-                                            </div>
-                                            <h3 className="text-xl font-bold text-amber-100">The Analog Anchor</h3>
-                                        </div>
-                                        <p className="text-amber-200/60 italic mb-6 border-l-2 border-amber-900 pl-4 text-sm">
-                                            "Family is the last part of human touch left."
-                                        </p>
-                                        <p className="text-xs text-slate-500 leading-relaxed font-mono">
-                                            In 2040, the Trust-Gap is the biggest hurdle. Family represents the only chaos I embrace in a sterile, optimized world.
-                                        </p>
-                                    </div>
+                                    <div className="relative z-10"><div className="flex items-center gap-3 mb-4"><div className="p-2 bg-amber-500/10 text-amber-500 rounded-lg"><Users size={24} /></div><h3 className="text-xl font-bold text-amber-100">The Analog Anchor</h3></div><p className="text-amber-200/60 italic mb-6 border-l-2 border-amber-900 pl-4 text-sm">"Family is the last part of human touch left."</p><p className="text-xs text-slate-500 leading-relaxed font-mono">In 2040, the Trust-Gap is the biggest hurdle. Family represents the only chaos I embrace in a sterile, optimized world.</p></div>
                                 </div>
-                                
                                 <AtmosphereWidget />
-
-                                {/* Tech Stack / Status */}
-                                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 font-mono text-xs shadow-xl">
-                                    <h4 className="text-slate-500 mb-4 uppercase tracking-widest border-b border-slate-800 pb-2 flex justify-between">
-                                        System Integrity
-                                        <span className="animate-pulse text-teal-500">● STABLE</span>
-                                    </h4>
+                                <div className="bg-slate-900 rounded-xl border border-slate-800 p-6 font-mono text-xs shadow-xl" onMouseEnter={() => playSound('hover')}>
+                                    <h4 className="text-slate-500 mb-4 uppercase tracking-widest border-b border-slate-800 pb-2 flex justify-between">System Integrity <span className="animate-pulse text-teal-500">● STABLE</span></h4>
                                     <div className="space-y-4">
-                                        <div>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-slate-400">SYNTHETIC TRAFFIC</span>
-                                                <span className="text-red-400">99.8%</span>
-                                            </div>
-                                            <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
-                                                <div className="w-[99.8%] bg-red-500/50 h-full rounded-full"></div>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className="text-slate-400">AERO-AUTONOMY</span>
-                                                <span className="text-teal-400">LEVEL 5</span>
-                                            </div>
-                                            <div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden">
-                                                <div className="w-full bg-teal-500/50 h-full rounded-full"></div>
-                                            </div>
-                                        </div>
-                                        <div className="pt-4 border-t border-slate-800">
-                                            <div className="flex items-center gap-2 text-slate-500">
-                                                <Car size={12} />
-                                                <span>Flying Autonomous Network: ACTIVE</span>
-                                            </div>
-                                            <div className="flex items-center gap-2 text-slate-500 mt-2">
-                                                <Eye size={12} />
-                                                <span>Global Eye-Scan: MANDATORY</span>
-                                            </div>
-                                        </div>
+                                        <div><div className="flex justify-between items-center mb-1"><span className="text-slate-400">SYNTHETIC TRAFFIC</span><span className="text-red-400">99.8%</span></div><div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden"><div className="w-[99.8%] bg-red-500/50 h-full rounded-full"></div></div></div>
+                                        <div><div className="flex justify-between items-center mb-1"><span className="text-slate-400">AERO-AUTONOMY</span><span className="text-teal-400">LEVEL 5</span></div><div className="w-full bg-slate-800 h-1 rounded-full overflow-hidden"><div className="w-full bg-teal-500/50 h-full rounded-full"></div></div></div>
+                                        <div className="pt-4 border-t border-slate-800"><div className="flex items-center gap-2 text-slate-500"><Car size={12} /><span>Flying Autonomous Network: ACTIVE</span></div><div className="flex items-center gap-2 text-slate-500 mt-2"><Eye size={12} /><span>Global Eye-Scan: MANDATORY</span></div></div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </main>
 
-                    <footer className="border-t border-slate-800 bg-slate-950 py-12 text-center text-slate-600 text-xs font-mono relative z-10">
-                        <p className="mb-2">© 2040 LACHLAN KENNEDY ENGINEERING.</p>
+                    <footer className="border-t border-slate-800 bg-slate-950 py-12 text-center text-slate-600 text-xs font-mono relative z-10 flex flex-col items-center gap-2">
+                        <p>© 2040 LACHLAN KENNEDY ENGINEERING.</p>
                         <p>VERIFIED HUMAN NODE // END OF LINE</p>
+                        <p className="text-teal-500/40">SYSTEM UPTIME: {uptime}s</p>
                     </footer>
 
-                    {/* Scanning Modal */}
-                    {showScanModal && (
+                    {scanModal && (
                         <div className="fixed inset-0 z-50 bg-black/95 flex flex-col items-center justify-center">
                             <div className="w-full max-w-md p-8 relative">
                                 <div className="relative w-64 h-64 mx-auto mb-8 border-2 border-teal-500/30 rounded-full overflow-hidden flex items-center justify-center">
-                                    <div className="absolute inset-0 bg-teal-500/10 animate-pulse"></div>
-                                    <Eye size={80} className="text-teal-500 relative z-10" />
+                                    <div className="absolute inset-0 bg-teal-500/10 animate-pulse"></div><Eye size={80} className="text-teal-500 relative z-10" />
                                     <div className="absolute top-0 left-0 right-0 h-1 bg-teal-400 shadow-[0_0_20px_#2dd4bf] animate-[scan_1.5s_ease-in-out_infinite]"></div>
                                 </div>
-                                <h2 className="text-2xl font-mono text-teal-400 text-center mb-4 tracking-widest">
-                                    VERIFYING HEARTBEAT SIGNATURE
-                                </h2>
-                                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700">
-                                    <div className="h-full bg-teal-500 transition-all duration-100 ease-out" style={{ width: `${scanProgress}%` }}></div>
-                                </div>
-                                <div className="flex justify-between text-xs font-mono text-slate-500 mt-2">
-                                    <span>ANALYZING BIO-RHYTHM...</span>
-                                    <span>{scanProgress}%</span>
-                                </div>
+                                <h2 className="text-2xl font-mono text-teal-400 text-center mb-4 tracking-widest">VERIFYING HEARTBEAT SIGNATURE</h2>
+                                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden border border-slate-700"><div className="h-full bg-teal-500 transition-all duration-100 ease-out" style={{ width: `${scanProgress}%` }}></div></div>
+                                <div className="flex justify-between text-xs font-mono text-slate-500 mt-2"><span>ANALYZING BIO-RHYTHM...</span><span>{scanProgress}%</span></div>
                             </div>
                         </div>
                     )}
